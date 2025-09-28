@@ -17,7 +17,7 @@
         background: #000;
         color: #fff;
         overflow: hidden;
-        cursor: none;
+        cursor: default;
       }
       
       canvas {
@@ -331,6 +331,10 @@
       <div class="hud-header">
         <div class="resource-group">
           <div class="resource-item">
+            <div class="resource-icon">❤️</div>
+            <span>体力: <span id="healthCount">100</span>/<span id="maxHealthCount">100</span></span>
+          </div>
+          <div class="resource-item">
             <div class="resource-icon">🥩</div>
             <span>肉: <span id="meatCount">0</span></span>
           </div>
@@ -345,6 +349,12 @@
         </div>
         
         <div class="control-group">
+          <div class="control-status">
+            <span>レベル: <span id="levelCount">1</span></span>
+          </div>
+          <div class="control-status">
+            <span>経験値: <span id="expCount">0</span></span>
+          </div>
           <div class="control-status">
             <span>制御: <span id="controlStatus">OFF</span></span>
             <div class="status-indicator" id="controlStatusIndicator"></div>
@@ -395,3 +405,4 @@
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
+<!-- テストコメント -->

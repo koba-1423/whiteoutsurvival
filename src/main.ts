@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createInitialState, GameState } from './state/frost_survival_design.js';
+import { createInitialState, GameState, calculateDamage, calculateDefense } from './state/frost_survival_design.js';
 
 /**
  * メインゲームクラス
@@ -21,9 +21,6 @@ class Game {
   
   // 入力管理
   private keys: { [key: string]: boolean } = {};
-  private mouseX: number = 0;
-  private mouseY: number = 0;
-  private isPointerLocked: boolean = false;
   
   // 敵管理
   private enemies: THREE.Mesh[] = [];
@@ -35,12 +32,17 @@ class Game {
   // UI要素
   private loadingScreen: HTMLElement | null = null;
   private loadingProgress: HTMLElement | null = null;
+  private healthCountEl: HTMLElement | null = null;
+  private maxHealthCountEl: HTMLElement | null = null;
+  private levelCountEl: HTMLElement | null = null;
+  private expCountEl: HTMLElement | null = null;
   private meatCountEl: HTMLElement | null = null;
   private processedCountEl: HTMLElement | null = null;
   private moneyCountEl: HTMLElement | null = null;
   private controlStatusEl: HTMLElement | null = null;
   private controlModeEl: HTMLElement | null = null;
   private controlStatusIndicatorEl: HTMLElement | null = null;
+  private zoneTitleEl: HTMLElement | null = null;
   
   // エフェクト
   private damageTexts: Array<{ element: HTMLElement; timeLeft: number; position: THREE.Vector3 }> = [];
@@ -131,12 +133,17 @@ class Game {
     this.loadingProgress = document.getElementById('loadingProgress');
     
     // HUD要素
+    this.healthCountEl = document.getElementById('healthCount');
+    this.maxHealthCountEl = document.getElementById('maxHealthCount');
+    this.levelCountEl = document.getElementById('levelCount');
+    this.expCountEl = document.getElementById('expCount');
     this.meatCountEl = document.getElementById('meatCount');
     this.processedCountEl = document.getElementById('processedCount');
     this.moneyCountEl = document.getElementById('moneyCount');
     this.controlStatusEl = document.getElementById('controlStatus');
     this.controlModeEl = document.getElementById('controlMode');
     this.controlStatusIndicatorEl = document.getElementById('controlStatusIndicator');
+    this.zoneTitleEl = document.getElementById('zoneTitle');
     
     // 入力イベント
     this.setupInputEvents();
@@ -155,26 +162,18 @@ class Game {
       this.keys[event.code] = false;
     });
     
-    // マウスイベント
+    // マウスイベント（ポインターロックなし）
     document.addEventListener('mousemove', (event) => {
-      if (this.isPointerLocked) {
-        this.mouseX += event.movementX * 0.002;
-        this.mouseY += event.movementY * 0.002;
-        this.mouseY = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.mouseY));
-      }
+      // マウス移動による視点変更は無効化
+      // 必要に応じて後で実装
     });
     
     // クリックイベント
     document.addEventListener('click', () => {
-      if (!this.isPointerLocked) {
-        document.body.requestPointerLock();
-      }
+      // 常に攻撃処理を実行（ポインターロックなし）
+      this.handlePlayerAttack();
     });
     
-    // ポインターロックイベント
-    document.addEventListener('pointerlockchange', () => {
-      this.isPointerLocked = document.pointerLockElement === document.body;
-    });
   }
 
   /**
@@ -501,10 +500,242 @@ class Game {
   }
 
   /**
+   * プレイヤーの攻撃処理
+   */
+  private handlePlayerAttack(): void {
+    if (!this.playerMesh) return;
+    
+    const currentTime = this.clock.getElapsedTime();
+    
+    // 攻撃クールダウンチェック
+    if (currentTime - this.lastPlayerAttack < this.attackCooldown) {
+      return;
+    }
+    
+    this.lastPlayerAttack = currentTime;
+    
+    // 攻撃範囲内の敵を検索
+    const attackRange = 2.0;
+    const enemiesInRange = this.enemies.filter(enemy => {
+      const distance = enemy.position.distanceTo(this.playerMesh!.position);
+      return distance <= attackRange;
+    });
+    
+    // 攻撃範囲内の敵にダメージ
+    enemiesInRange.forEach(enemy => {
+      this.damageEnemy(enemy);
+    });
+    
+    // 攻撃エフェクト表示
+    this.showAttackEffect();
+  }
+
+  /**
+   * 敵にダメージを与える
+   */
+  private damageEnemy(enemy: THREE.Mesh): void {
+    // ダメージ計算
+    const damage = this.calculatePlayerDamage();
+    
+    // ダメージテキスト表示
+    this.showDamageText(enemy.position, damage);
+    
+    // 敵を削除（倒した）
+    this.scene.remove(enemy);
+    const enemyIndex = this.enemies.indexOf(enemy);
+    if (enemyIndex > -1) {
+      this.enemies.splice(enemyIndex, 1);
+    }
+    
+    // リソース獲得
+    this.gainResources();
+  }
+
+  /**
+   * プレイヤーのダメージ計算
+   */
+  private calculatePlayerDamage(): number {
+    return calculateDamage(this.state.weaponLevel);
+  }
+
+  /**
+   * リソース獲得処理
+   */
+  private gainResources(): void {
+    // 肉を1個獲得
+    this.state.meatCount += 1;
+    
+    // お金を少し獲得
+    this.state.money += 5;
+    
+    // 経験値を獲得
+    this.gainExperience(10);
+    
+    // リソース獲得エフェクト
+    this.showResourceGainEffect();
+  }
+
+  /**
+   * 経験値獲得処理
+   */
+  private gainExperience(exp: number): void {
+    this.state.experience += exp;
+    
+    // レベルアップチェック
+    const requiredExp = this.getExperienceRequired(this.state.level + 1);
+    if (this.state.experience >= requiredExp) {
+      this.levelUp();
+    }
+  }
+
+  /**
+   * レベルアップ処理
+   */
+  private levelUp(): void {
+    this.state.level += 1;
+    this.state.maxHealth += 20;
+    this.state.maxStamina += 10;
+    this.state.health = this.state.maxHealth; // 体力全回復
+    this.state.stamina = this.state.maxStamina; // スタミナ全回復
+    
+    // レベルアップエフェクト
+    this.showLevelUpEffect();
+  }
+
+  /**
+   * 必要経験値を取得
+   */
+  private getExperienceRequired(level: number): number {
+    return level * 100 + (level - 1) * 50;
+  }
+
+  /**
+   * リソース獲得エフェクト表示
+   */
+  private showResourceGainEffect(): void {
+    const effectText = document.createElement('div');
+    effectText.textContent = '+肉 +お金 +経験値';
+    effectText.style.position = 'absolute';
+    effectText.style.left = '50%';
+    effectText.style.top = '40%';
+    effectText.style.transform = 'translate(-50%, -50%)';
+    effectText.style.color = '#00ff00';
+    effectText.style.fontSize = '18px';
+    effectText.style.fontWeight = 'bold';
+    effectText.style.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.8)';
+    effectText.style.pointerEvents = 'none';
+    effectText.style.zIndex = '2000';
+    
+    document.body.appendChild(effectText);
+    
+    // アニメーション
+    let opacity = 1;
+    let yOffset = 0;
+    const animate = () => {
+      opacity -= 0.02;
+      yOffset += 1;
+      effectText.style.opacity = opacity.toString();
+      effectText.style.transform = `translate(-50%, calc(-50% - ${yOffset}px))`;
+      
+      if (opacity > 0) {
+        requestAnimationFrame(animate);
+      } else {
+        document.body.removeChild(effectText);
+      }
+    };
+    animate();
+  }
+
+  /**
+   * レベルアップエフェクト表示
+   */
+  private showLevelUpEffect(): void {
+    const levelUpText = document.createElement('div');
+    levelUpText.textContent = `レベルアップ！ Lv.${this.state.level}`;
+    levelUpText.style.position = 'absolute';
+    levelUpText.style.left = '50%';
+    levelUpText.style.top = '30%';
+    levelUpText.style.transform = 'translate(-50%, -50%)';
+    levelUpText.style.color = '#ffff00';
+    levelUpText.style.fontSize = '28px';
+    levelUpText.style.fontWeight = 'bold';
+    levelUpText.style.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.8)';
+    levelUpText.style.pointerEvents = 'none';
+    levelUpText.style.zIndex = '2000';
+    
+    document.body.appendChild(levelUpText);
+    
+    // アニメーション
+    let opacity = 1;
+    let yOffset = 0;
+    const animate = () => {
+      opacity -= 0.015;
+      yOffset += 1.5;
+      levelUpText.style.opacity = opacity.toString();
+      levelUpText.style.transform = `translate(-50%, calc(-50% - ${yOffset}px))`;
+      
+      if (opacity > 0) {
+        requestAnimationFrame(animate);
+      } else {
+        document.body.removeChild(levelUpText);
+      }
+    };
+    animate();
+  }
+
+  /**
+   * 攻撃エフェクト表示
+   */
+  private showAttackEffect(): void {
+    // 攻撃エフェクトの実装（将来的にパーティクルエフェクトなど）
+    console.log('攻撃！');
+  }
+
+  /**
+   * ダメージテキスト表示
+   */
+  private showDamageText(position: THREE.Vector3, damage: number): void {
+    const damageText = document.createElement('div');
+    damageText.className = 'damage-text';
+    damageText.textContent = `-${damage}`;
+    damageText.style.position = 'absolute';
+    damageText.style.left = '50%';
+    damageText.style.top = '50%';
+    damageText.style.transform = 'translate(-50%, -50%)';
+    damageText.style.color = '#ff4444';
+    damageText.style.fontSize = '24px';
+    damageText.style.fontWeight = 'bold';
+    damageText.style.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.8)';
+    damageText.style.pointerEvents = 'none';
+    damageText.style.zIndex = '2000';
+    
+    document.body.appendChild(damageText);
+    
+    // アニメーション
+    let opacity = 1;
+    let yOffset = 0;
+    const animate = () => {
+      opacity -= 0.02;
+      yOffset += 2;
+      damageText.style.opacity = opacity.toString();
+      damageText.style.transform = `translate(-50%, calc(-50% - ${yOffset}px))`;
+      
+      if (opacity > 0) {
+        requestAnimationFrame(animate);
+      } else {
+        document.body.removeChild(damageText);
+      }
+    };
+    animate();
+  }
+
+  /**
    * 敵を更新
    */
   private updateEnemies(deltaTime: number): void {
     if (!this.playerMesh) return;
+    
+    const currentTime = this.clock.getElapsedTime();
     
     this.enemies.forEach(enemy => {
       const distance = enemy.position.distanceTo(this.playerMesh!.position);
@@ -516,8 +747,110 @@ class Game {
           .normalize();
         
         enemy.position.add(direction.multiplyScalar(this.enemySpeed * deltaTime));
+        
+        // 攻撃範囲内で攻撃
+        if (distance <= this.enemyAttackRange) {
+          if (currentTime - this.lastEnemyAttack >= this.enemyAttackCooldown) {
+            this.handleEnemyAttack(enemy);
+            this.lastEnemyAttack = currentTime;
+          }
+        }
       }
     });
+  }
+
+  /**
+   * 敵の攻撃処理
+   */
+  private handleEnemyAttack(enemy: THREE.Mesh): void {
+    if (!this.playerMesh) return;
+    
+    // プレイヤーにダメージ
+    this.damagePlayer();
+    
+    // 攻撃エフェクト
+    this.showEnemyAttackEffect(enemy.position);
+  }
+
+  /**
+   * プレイヤーにダメージを与える
+   */
+  private damagePlayer(): void {
+    const enemyDamage = 10; // 敵の基本ダメージ
+    const defense = this.calculatePlayerDefense();
+    const actualDamage = Math.max(1, enemyDamage - defense);
+    
+    this.state.health -= actualDamage;
+    
+    // ダメージテキスト表示
+    this.showPlayerDamageText(actualDamage);
+    
+    // 体力が0以下になった場合の処理
+    if (this.state.health <= 0) {
+      this.handlePlayerDeath();
+    }
+  }
+
+  /**
+   * プレイヤーの防御力計算
+   */
+  private calculatePlayerDefense(): number {
+    return calculateDefense(this.state.armorLevel);
+  }
+
+  /**
+   * プレイヤーのダメージテキスト表示
+   */
+  private showPlayerDamageText(damage: number): void {
+    const damageText = document.createElement('div');
+    damageText.className = 'damage-text';
+    damageText.textContent = `-${damage}`;
+    damageText.style.position = 'absolute';
+    damageText.style.left = '50%';
+    damageText.style.top = '50%';
+    damageText.style.transform = 'translate(-50%, -50%)';
+    damageText.style.color = '#ff0000';
+    damageText.style.fontSize = '32px';
+    damageText.style.fontWeight = 'bold';
+    damageText.style.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.8)';
+    damageText.style.pointerEvents = 'none';
+    damageText.style.zIndex = '2000';
+    
+    document.body.appendChild(damageText);
+    
+    // アニメーション
+    let opacity = 1;
+    let yOffset = 0;
+    const animate = () => {
+      opacity -= 0.02;
+      yOffset += 3;
+      damageText.style.opacity = opacity.toString();
+      damageText.style.transform = `translate(-50%, calc(-50% - ${yOffset}px))`;
+      
+      if (opacity > 0) {
+        requestAnimationFrame(animate);
+      } else {
+        document.body.removeChild(damageText);
+      }
+    };
+    animate();
+  }
+
+  /**
+   * 敵の攻撃エフェクト表示
+   */
+  private showEnemyAttackEffect(position: THREE.Vector3): void {
+    // 敵の攻撃エフェクト（将来的にパーティクルエフェクトなど）
+    console.log('敵の攻撃！');
+  }
+
+  /**
+   * プレイヤーの死亡処理
+   */
+  private handlePlayerDeath(): void {
+    console.log('ゲームオーバー！');
+    // 将来的にゲームオーバー画面を表示
+    this.state.health = this.state.maxHealth; // 一時的に体力を回復
   }
 
   /**
@@ -534,6 +867,18 @@ class Game {
    * UIを更新
    */
   private updateUI(): void {
+    if (this.healthCountEl) {
+      this.healthCountEl.textContent = this.state.health.toString();
+    }
+    if (this.maxHealthCountEl) {
+      this.maxHealthCountEl.textContent = this.state.maxHealth.toString();
+    }
+    if (this.levelCountEl) {
+      this.levelCountEl.textContent = this.state.level.toString();
+    }
+    if (this.expCountEl) {
+      this.expCountEl.textContent = this.state.experience.toString();
+    }
     if (this.meatCountEl) {
       this.meatCountEl.textContent = this.state.meatCount.toString();
     }
@@ -544,13 +889,16 @@ class Game {
       this.moneyCountEl.textContent = this.state.money.toString();
     }
     if (this.controlStatusEl) {
-      this.controlStatusEl.textContent = this.isPointerLocked ? 'ON' : 'OFF';
+      this.controlStatusEl.textContent = 'ON';
     }
     if (this.controlModeEl) {
-      this.controlModeEl.textContent = 'FPS';
+      this.controlModeEl.textContent = 'NORMAL';
     }
     if (this.controlStatusIndicatorEl) {
-      this.controlStatusIndicatorEl.className = this.isPointerLocked ? 'status-on' : 'status-off';
+      this.controlStatusIndicatorEl.className = 'status-on';
+    }
+    if (this.zoneTitleEl) {
+      this.zoneTitleEl.textContent = '荒野';
     }
   }
 

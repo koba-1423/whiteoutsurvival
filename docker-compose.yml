@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5173:5173"
+    volumes:
+      # ホストのコードをコンテナにマウント（ホットリロード用）
+      - .:/app
+      # node_modulesは除外（コンテナ内のものを使用）
+      - /app/node_modules
+    environment:
+      # ファイル監視を有効化
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    command: npm run dev -- --host
+    stdin_open: true
+    tty: true

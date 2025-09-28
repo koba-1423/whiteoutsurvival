@@ -109,7 +109,7 @@ export function levelUp(state: GameState): GameState {
 /**
  * ダメージ計算
  */
-export function calculateDamage(weaponLevel: number, enemyLevel: number = 1): number {
+export function calculateDamage(weaponLevel: number): number {
   const baseDamage = 10 + (weaponLevel - 1) * 5;
   const levelMultiplier = 1 + (weaponLevel - 1) * 0.1;
   return Math.floor(baseDamage * levelMultiplier);
