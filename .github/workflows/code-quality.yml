@@ -1,4 +1,4 @@
-name: Code Quality Check
+name: code-quality.yml - Code Quality Check
 
 on:
   push:
