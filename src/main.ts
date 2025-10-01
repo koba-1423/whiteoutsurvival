@@ -453,6 +453,23 @@ class Game {
     this.scene.add(playerMesh);
     this.playerMesh = playerMesh;
 
+    // デバッグ用ログ（本番環境での問題調査）
+    const isProduction =
+      typeof window !== "undefined" &&
+      window.location &&
+      window.location.hostname === "koba-1423.github.io";
+    if (isProduction) {
+      console.log("👤 プレイヤーモデル初期化:", {
+        position: {
+          x: playerMesh.position.x,
+          y: playerMesh.position.y,
+          z: playerMesh.position.z,
+        },
+        sceneChildren: this.scene.children.length,
+        playerMeshExists: !!this.playerMesh,
+      });
+    }
+
     // 武器を作成
     this.updateSword();
   }
@@ -654,8 +671,37 @@ class Game {
       moveVector.normalize();
       moveVector.multiplyScalar(moveSpeed * deltaTime);
 
+      // デバッグ用ログ（本番環境での問題調査）
+      const isProduction =
+        typeof window !== "undefined" &&
+        window.location &&
+        window.location.hostname === "koba-1423.github.io";
+      if (isProduction) {
+        console.log("🚶 移動処理詳細:", {
+          beforePosition: {
+            x: this.playerMesh.position.x,
+            y: this.playerMesh.position.y,
+            z: this.playerMesh.position.z,
+          },
+          moveVector: { x: moveVector.x, y: moveVector.y, z: moveVector.z },
+          deltaTime: deltaTime,
+          moveSpeed: moveSpeed,
+        });
+      }
+
       // プレイヤーを移動
       this.playerMesh.position.add(moveVector);
+
+      // 移動後の位置をログ出力
+      if (isProduction) {
+        console.log("🚶 移動後位置:", {
+          afterPosition: {
+            x: this.playerMesh.position.x,
+            y: this.playerMesh.position.y,
+            z: this.playerMesh.position.z,
+          },
+        });
+      }
     }
   }
 
@@ -1074,8 +1120,38 @@ class Game {
    */
   private updateCamera(): void {
     if (this.playerMesh) {
+      const isProduction =
+        typeof window !== "undefined" &&
+        window.location &&
+        window.location.hostname === "koba-1423.github.io";
+
+      if (isProduction) {
+        console.log("📷 カメラ更新:", {
+          playerPosition: {
+            x: this.playerMesh.position.x,
+            y: this.playerMesh.position.y,
+            z: this.playerMesh.position.z,
+          },
+          cameraPosition: {
+            x: this.camera.position.x,
+            y: this.camera.position.y,
+            z: this.camera.position.z,
+          },
+        });
+      }
+
       this.camera.position.x = this.playerMesh.position.x;
       this.camera.position.z = this.playerMesh.position.z + 20;
+
+      if (isProduction) {
+        console.log("📷 カメラ更新後:", {
+          newCameraPosition: {
+            x: this.camera.position.x,
+            y: this.camera.position.y,
+            z: this.camera.position.z,
+          },
+        });
+      }
     }
   }
 
