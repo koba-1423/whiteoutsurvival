@@ -20,6 +20,8 @@ export default [
         HTMLElement: "readonly",
         setTimeout: "readonly",
         requestAnimationFrame: "readonly",
+        Event: "readonly",
+        KeyboardEvent: "readonly",
       },
     },
     plugins: {
