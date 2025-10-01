@@ -666,16 +666,27 @@ class Game {
       this.updatePCMovement(moveVector);
     }
 
+    // デバッグ用ログ（本番環境での問題調査）
+    const isProduction =
+      typeof window !== "undefined" &&
+      window.location &&
+      window.location.hostname === "koba-1423.github.io";
+
+    if (isProduction) {
+      console.log("🔍 移動処理チェック:", {
+        moveVectorLength: moveVector.length(),
+        moveVector: { x: moveVector.x, y: moveVector.y, z: moveVector.z },
+        deltaTime: deltaTime,
+        moveSpeed: moveSpeed,
+        playerMeshExists: !!this.playerMesh,
+      });
+    }
+
     // 正規化
     if (moveVector.length() > 0) {
       moveVector.normalize();
       moveVector.multiplyScalar(moveSpeed * deltaTime);
 
-      // デバッグ用ログ（本番環境での問題調査）
-      const isProduction =
-        typeof window !== "undefined" &&
-        window.location &&
-        window.location.hostname === "koba-1423.github.io";
       if (isProduction) {
         console.log("🚶 移動処理詳細:", {
           beforePosition: {
@@ -701,6 +712,10 @@ class Game {
             z: this.playerMesh.position.z,
           },
         });
+      }
+    } else {
+      if (isProduction) {
+        console.log("❌ 移動ベクトルが0 - 移動処理スキップ");
       }
     }
   }
@@ -1120,38 +1135,8 @@ class Game {
    */
   private updateCamera(): void {
     if (this.playerMesh) {
-      const isProduction =
-        typeof window !== "undefined" &&
-        window.location &&
-        window.location.hostname === "koba-1423.github.io";
-
-      if (isProduction) {
-        console.log("📷 カメラ更新:", {
-          playerPosition: {
-            x: this.playerMesh.position.x,
-            y: this.playerMesh.position.y,
-            z: this.playerMesh.position.z,
-          },
-          cameraPosition: {
-            x: this.camera.position.x,
-            y: this.camera.position.y,
-            z: this.camera.position.z,
-          },
-        });
-      }
-
       this.camera.position.x = this.playerMesh.position.x;
       this.camera.position.z = this.playerMesh.position.z + 20;
-
-      if (isProduction) {
-        console.log("📷 カメラ更新後:", {
-          newCameraPosition: {
-            x: this.camera.position.x,
-            y: this.camera.position.y,
-            z: this.camera.position.z,
-          },
-        });
-      }
     }
   }
 
