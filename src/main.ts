@@ -26,6 +26,12 @@ class Game {
 
   // 入力管理
   private keys: { [key: string]: boolean } = {};
+  private isMobile: boolean = false;
+  private touchStartX: number = 0;
+  private touchStartY: number = 0;
+  private touchCurrentX: number = 0;
+  private touchCurrentY: number = 0;
+  private isTouching: boolean = false;
 
   // 敵管理
   private enemies: THREE.Mesh[] = [];
@@ -56,11 +62,37 @@ class Game {
     position: THREE.Vector3;
   }> = [];
 
+  // 雪のパーティクル
+  private snowParticles: THREE.Points | null = null;
+
   constructor() {
+    this.detectDevice();
     this.initializeCoreSystems();
     this.initializeGameState();
     this.initializeUI();
     this.initialize();
+  }
+
+  /**
+   * デバイスを検出
+   */
+  private detectDevice(): void {
+    // タッチデバイスかどうかを検出
+    this.isMobile =
+      "ontouchstart" in window ||
+      (typeof window !== "undefined" &&
+        window.navigator &&
+        window.navigator.maxTouchPoints > 0);
+
+    // ユーザーエージェントでも確認
+    if (!this.isMobile && typeof window !== "undefined" && window.navigator) {
+      this.isMobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          window.navigator.userAgent
+        );
+    }
+
+    console.log(`デバイス検出: ${this.isMobile ? "モバイル" : "PC"}`);
   }
 
   /**
@@ -97,6 +129,9 @@ class Game {
     // 時計
     this.clock = new THREE.Clock();
 
+    // ウィンドウリサイズイベントリスナーを追加
+    this.setupResizeHandler();
+
     // ライティング
     const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
     this.scene.add(ambientLight);
@@ -114,21 +149,78 @@ class Game {
     directionalLight.shadow.camera.bottom = -100;
     this.scene.add(directionalLight);
 
-    // 地面
+    // 雪原の地面
     const groundGeometry = new THREE.PlaneGeometry(200, 200);
     const groundMaterial = new THREE.MeshStandardMaterial({
-      color: 0x90ee90,
-      roughness: 0.8,
-      metalness: 0.1,
+      color: 0xf0f8ff, // 雪のような白い色
+      roughness: 0.9,
+      metalness: 0.0,
     });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    // フィールド（三角形エリア）
-    this.createFieldTriangles();
-    this.createWoodenFence();
+    // フィールド（三角形エリア）を削除してガビガビ動く問題を解決
+    // this.createFieldTriangles();
+
+    // 雪のパーティクルシステムを作成
+    this.createSnowParticles();
+  }
+
+  /**
+   * 雪のパーティクルシステムを作成
+   */
+  private createSnowParticles(): void {
+    const particleCount = 1000;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = new Float32Array(particleCount * 3);
+
+    // 雪のパーティクルの初期位置と速度を設定
+    for (let i = 0; i < particleCount; i++) {
+      const i3 = i * 3;
+
+      // ランダムな位置（上空から）
+      positions[i3] = (Math.random() - 0.5) * 200; // x
+      positions[i3 + 1] = Math.random() * 50 + 20; // y (高さ)
+      positions[i3 + 2] = (Math.random() - 0.5) * 200; // z
+
+      // ランダムな速度
+      velocities[i3] = (Math.random() - 0.5) * 0.5; // x方向の速度
+      velocities[i3 + 1] = -Math.random() * 2 - 1; // y方向の速度（下向き）
+      velocities[i3 + 2] = (Math.random() - 0.5) * 0.5; // z方向の速度
+    }
+
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("velocity", new THREE.BufferAttribute(velocities, 3));
+
+    // 雪のマテリアル
+    const material = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.1,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+    });
+
+    this.snowParticles = new THREE.Points(geometry, material);
+    this.scene.add(this.snowParticles);
+  }
+
+  /**
+   * ウィンドウリサイズハンドラーを設定
+   */
+  private setupResizeHandler(): void {
+    window.addEventListener("resize", () => {
+      // カメラのアスペクト比を更新
+      this.camera.aspect = window.innerWidth / window.innerHeight;
+      this.camera.updateProjectionMatrix();
+
+      // レンダラーのサイズを更新
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.setPixelRatio(window.devicePixelRatio);
+    });
   }
 
   /**
@@ -169,7 +261,18 @@ class Game {
    * 入力イベントを設定
    */
   private setupInputEvents(): void {
-    // キーボードイベント
+    if (this.isMobile) {
+      this.setupMobileControls();
+    } else {
+      this.setupPCControls();
+    }
+  }
+
+  /**
+   * PC用の操作を設定
+   */
+  private setupPCControls(): void {
+    // キーボードイベント（矢印キー対応）
     document.addEventListener("keydown", (event) => {
       this.keys[event.code] = true;
     });
@@ -178,16 +281,47 @@ class Game {
       this.keys[event.code] = false;
     });
 
-    // マウスイベント（ポインターロックなし）
-    document.addEventListener("mousemove", () => {
-      // マウス移動による視点変更は無効化
-      // 必要に応じて後で実装
+    // クリックイベント（攻撃）
+    document.addEventListener("click", () => {
+      this.handlePlayerAttack();
+    });
+  }
+
+  /**
+   * モバイル用の操作を設定
+   */
+  private setupMobileControls(): void {
+    // タッチ開始
+    document.addEventListener("touchstart", (event) => {
+      event.preventDefault();
+      const touch = event.touches[0];
+      this.touchStartX = touch.clientX;
+      this.touchStartY = touch.clientY;
+      this.touchCurrentX = touch.clientX;
+      this.touchCurrentY = touch.clientY;
+      this.isTouching = true;
     });
 
-    // クリックイベント
-    document.addEventListener("click", () => {
-      // 常に攻撃処理を実行（ポインターロックなし）
-      this.handlePlayerAttack();
+    // タッチ移動
+    document.addEventListener("touchmove", (event) => {
+      event.preventDefault();
+      if (this.isTouching) {
+        const touch = event.touches[0];
+        this.touchCurrentX = touch.clientX;
+        this.touchCurrentY = touch.clientY;
+      }
+    });
+
+    // タッチ終了
+    document.addEventListener("touchend", (event) => {
+      event.preventDefault();
+      this.isTouching = false;
+    });
+
+    // タッチキャンセル
+    document.addEventListener("touchcancel", (event) => {
+      event.preventDefault();
+      this.isTouching = false;
     });
   }
 
@@ -378,54 +512,6 @@ class Game {
   }
 
   /**
-   * 木製の柵を作成
-   */
-  private createWoodenFence(): void {
-    const fenceGeometry = new THREE.CylinderGeometry(0.1, 0.1, 2, 8);
-    const fenceMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
-
-    // 柵の柱を配置
-    const fencePositions = [
-      new THREE.Vector3(-2, 1, 0),
-      new THREE.Vector3(2, 1, 0),
-      new THREE.Vector3(0, 1, -2),
-      new THREE.Vector3(0, 1, 2),
-    ];
-
-    fencePositions.forEach((pos) => {
-      const fence = new THREE.Mesh(fenceGeometry, fenceMaterial);
-      fence.position.copy(pos);
-      fence.castShadow = true;
-      fence.receiveShadow = true;
-      this.scene.add(fence);
-    });
-
-    // 柵の接続部分
-    const connectionGeometry = new THREE.CylinderGeometry(0.05, 0.05, 4, 8);
-    const connectionMaterial = new THREE.MeshStandardMaterial({
-      color: 0x8b4513,
-    });
-
-    // 水平の接続
-    const horizontalConnection = new THREE.Mesh(
-      connectionGeometry,
-      connectionMaterial
-    );
-    horizontalConnection.rotation.z = Math.PI / 2;
-    horizontalConnection.position.set(0, 1, 0);
-    this.scene.add(horizontalConnection);
-
-    // 垂直の接続
-    const verticalConnection = new THREE.Mesh(
-      connectionGeometry,
-      connectionMaterial
-    );
-    verticalConnection.rotation.x = Math.PI / 2;
-    verticalConnection.position.set(0, 1, 0);
-    this.scene.add(verticalConnection);
-  }
-
-  /**
    * 敵を生成
    */
   private spawnEnemies(): void {
@@ -495,6 +581,9 @@ class Game {
 
     // ダメージテキストを更新
     this.updateDamageTexts(deltaTime);
+
+    // 雪のパーティクルを更新
+    this.updateSnowParticles(deltaTime);
   }
 
   /**
@@ -506,11 +595,13 @@ class Game {
     const moveSpeed = 5.0;
     const moveVector = new THREE.Vector3();
 
-    // キーボード入力
-    if (this.keys["KeyW"]) moveVector.z -= 1;
-    if (this.keys["KeyS"]) moveVector.z += 1;
-    if (this.keys["KeyA"]) moveVector.x -= 1;
-    if (this.keys["KeyD"]) moveVector.x += 1;
+    if (this.isMobile) {
+      // モバイル用のタッチ操作
+      this.updateMobileMovement(moveVector, deltaTime);
+    } else {
+      // PC用のキーボード操作
+      this.updatePCMovement(moveVector);
+    }
 
     // 正規化
     if (moveVector.length() > 0) {
@@ -519,6 +610,52 @@ class Game {
 
       // プレイヤーを移動
       this.playerMesh.position.add(moveVector);
+    }
+  }
+
+  /**
+   * PC用の移動処理
+   */
+  private updatePCMovement(moveVector: THREE.Vector3): void {
+    // 矢印キーとWASDキーに対応
+    if (this.keys["KeyW"] || this.keys["ArrowUp"]) moveVector.z -= 1;
+    if (this.keys["KeyS"] || this.keys["ArrowDown"]) moveVector.z += 1;
+    if (this.keys["KeyA"] || this.keys["ArrowLeft"]) moveVector.x -= 1;
+    if (this.keys["KeyD"] || this.keys["ArrowRight"]) moveVector.x += 1;
+  }
+
+  /**
+   * モバイル用の移動処理
+   */
+  private updateMobileMovement(
+    moveVector: THREE.Vector3,
+    _deltaTime: number
+  ): void {
+    if (!this.isTouching) return;
+
+    // タッチの移動量を計算
+    const deltaX = this.touchCurrentX - this.touchStartX;
+    const deltaY = this.touchCurrentY - this.touchStartY;
+
+    // 移動の閾値（小さな動きは無視）
+    const threshold = 10;
+    if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) return;
+
+    // タッチの方向に基づいて移動
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      // 左右の移動
+      if (deltaX > 0) {
+        moveVector.x += 1; // 右
+      } else {
+        moveVector.x -= 1; // 左
+      }
+    } else {
+      // 上下の移動
+      if (deltaY > 0) {
+        moveVector.z += 1; // 下
+      } else {
+        moveVector.z -= 1; // 上
+      }
     }
   }
 
@@ -923,8 +1060,44 @@ class Game {
       this.controlStatusIndicatorEl.className = "status-on";
     }
     if (this.zoneTitleEl) {
-      this.zoneTitleEl.textContent = "荒野";
+      this.zoneTitleEl.textContent = "雪原";
     }
+  }
+
+  /**
+   * 雪のパーティクルを更新
+   */
+  private updateSnowParticles(deltaTime: number): void {
+    if (!this.snowParticles) return;
+
+    const positions = this.snowParticles.geometry.attributes.position
+      .array as Float32Array;
+    const velocities = this.snowParticles.geometry.attributes.velocity
+      .array as Float32Array;
+
+    for (let i = 0; i < positions.length; i += 3) {
+      // 位置を更新
+      positions[i] += velocities[i] * deltaTime; // x
+      positions[i + 1] += velocities[i + 1] * deltaTime; // y
+      positions[i + 2] += velocities[i + 2] * deltaTime; // z
+
+      // 地面に落ちた雪を上に戻す
+      if (positions[i + 1] < 0) {
+        positions[i] = (Math.random() - 0.5) * 200; // x
+        positions[i + 1] = 50 + Math.random() * 20; // y (上空)
+        positions[i + 2] = (Math.random() - 0.5) * 200; // z
+      }
+
+      // 画面外に出た雪を戻す
+      if (Math.abs(positions[i]) > 100 || Math.abs(positions[i + 2]) > 100) {
+        positions[i] = (Math.random() - 0.5) * 200;
+        positions[i + 1] = Math.random() * 50 + 20;
+        positions[i + 2] = (Math.random() - 0.5) * 200;
+      }
+    }
+
+    // ジオメトリを更新
+    this.snowParticles.geometry.attributes.position.needsUpdate = true;
   }
 
   /**
