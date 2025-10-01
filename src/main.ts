@@ -98,19 +98,6 @@ class Game {
           window.navigator.userAgent
         );
     }
-
-    // デバッグ用ログ（本番環境での問題調査）
-    if (typeof window !== "undefined" && window.location) {
-      const isProduction = window.location.hostname === "koba-1423.github.io";
-      if (isProduction) {
-        console.log("🔍 本番環境デバッグ情報:");
-        console.log("- デバイス:", this.isMobile ? "モバイル" : "PC");
-        console.log("- URL:", window.location.href);
-        console.log("- User Agent:", window.navigator.userAgent);
-        console.log("- Touch Support:", "ontouchstart" in window);
-        console.log("- Max Touch Points:", window.navigator.maxTouchPoints);
-      }
-    }
   }
 
   /**
@@ -287,15 +274,6 @@ class Game {
    * PC用の操作を設定
    */
   private setupPCControls(): void {
-    // デバッグ用ログ（本番環境での問題調査）
-    const isProduction =
-      typeof window !== "undefined" &&
-      window.location &&
-      window.location.hostname === "koba-1423.github.io";
-    if (isProduction) {
-      console.log("🎮 PC操作設定開始");
-    }
-
     // フォーカスを確保するためのクリックイベント
     document.addEventListener("click", (event) => {
       // フォーカスを確保
@@ -306,39 +284,17 @@ class Game {
 
       event.preventDefault();
       this.handlePlayerAttack();
-
-      if (isProduction) {
-        console.log("🖱️ クリック攻撃 - フォーカス確保");
-      }
     });
 
     // キーボードイベント（矢印キー対応）- documentとwindowの両方に設定
     const keyHandler = (event: KeyboardEvent) => {
       event.preventDefault();
       this.keys[event.code] = true;
-
-      if (isProduction) {
-        console.log(
-          "⌨️ キー押下:",
-          event.code,
-          "現在のキー状態:",
-          Object.keys(this.keys).filter((key) => this.keys[key])
-        );
-      }
     };
 
     const keyUpHandler = (event: KeyboardEvent) => {
       event.preventDefault();
       this.keys[event.code] = false;
-
-      if (isProduction) {
-        console.log(
-          "⌨️ キー離上:",
-          event.code,
-          "現在のキー状態:",
-          Object.keys(this.keys).filter((key) => this.keys[key])
-        );
-      }
     };
 
     // documentとwindowの両方にイベントリスナーを追加
@@ -350,40 +306,7 @@ class Game {
     // フォーカスが外れた時の処理
     window.addEventListener("blur", () => {
       this.keys = {};
-      if (isProduction) {
-        console.log("👁️ フォーカス外れ - キー状態リセット");
-      }
     });
-
-    // フォーカスが戻った時の処理
-    window.addEventListener("focus", () => {
-      if (isProduction) {
-        console.log("👁️ フォーカス復帰");
-      }
-    });
-
-    // 本番環境では追加のフォーカス確保
-    if (isProduction) {
-      // ページロード後にフォーカスを確保
-      const focusAttempts = [500, 1000, 1500, 2000, 3000];
-      focusAttempts.forEach((delay) => {
-        setTimeout(() => {
-          if (document.body) {
-            document.body.focus();
-            document.body.tabIndex = -1;
-            console.log(`🎯 フォーカス確保試行 (${delay}ms)`);
-          }
-        }, delay);
-      });
-
-      // キーイベントが検出されない場合の警告
-      setTimeout(() => {
-        console.log("⚠️ キーイベント検出テスト開始");
-        console.log("- フォーカス状態:", document.hasFocus());
-        console.log("- アクティブ要素:", document.activeElement?.tagName);
-        console.log("- キーイベントリスナー設定済み");
-      }, 5000);
-    }
   }
 
   /**
@@ -452,23 +375,6 @@ class Game {
     playerMesh.receiveShadow = true;
     this.scene.add(playerMesh);
     this.playerMesh = playerMesh;
-
-    // デバッグ用ログ（本番環境での問題調査）
-    const isProduction =
-      typeof window !== "undefined" &&
-      window.location &&
-      window.location.hostname === "koba-1423.github.io";
-    if (isProduction) {
-      console.log("👤 プレイヤーモデル初期化:", {
-        position: {
-          x: playerMesh.position.x,
-          y: playerMesh.position.y,
-          z: playerMesh.position.z,
-        },
-        sceneChildren: this.scene.children.length,
-        playerMeshExists: !!this.playerMesh,
-      });
-    }
 
     // 武器を作成
     this.updateSword();
@@ -666,61 +572,13 @@ class Game {
       this.updatePCMovement(moveVector);
     }
 
-    // デバッグ用ログ（本番環境での問題調査）
-    const isProduction =
-      typeof window !== "undefined" &&
-      window.location &&
-      window.location.hostname === "koba-1423.github.io";
-
-    // キー入力がある場合のみログを表示
-    const hasKeyInput = Object.keys(this.keys).some((key) => this.keys[key]);
-    if (isProduction && hasKeyInput) {
-      console.log("🔍 移動処理チェック:", {
-        moveVectorLength: moveVector.length(),
-        moveVector: { x: moveVector.x, y: moveVector.y, z: moveVector.z },
-        deltaTime: deltaTime,
-        moveSpeed: moveSpeed,
-        playerMeshExists: !!this.playerMesh,
-        keys: Object.keys(this.keys).filter((key) => this.keys[key]),
-        isMobile: this.isMobile,
-      });
-    }
-
     // 正規化
     if (moveVector.length() > 0) {
       moveVector.normalize();
       moveVector.multiplyScalar(moveSpeed * deltaTime);
 
-      if (isProduction) {
-        console.log("🚶 移動処理詳細:", {
-          beforePosition: {
-            x: this.playerMesh.position.x,
-            y: this.playerMesh.position.y,
-            z: this.playerMesh.position.z,
-          },
-          moveVector: { x: moveVector.x, y: moveVector.y, z: moveVector.z },
-          deltaTime: deltaTime,
-          moveSpeed: moveSpeed,
-        });
-      }
-
       // プレイヤーを移動
       this.playerMesh.position.add(moveVector);
-
-      // 移動後の位置をログ出力
-      if (isProduction) {
-        console.log("🚶 移動後位置:", {
-          afterPosition: {
-            x: this.playerMesh.position.x,
-            y: this.playerMesh.position.y,
-            z: this.playerMesh.position.z,
-          },
-        });
-      }
-    } else {
-      if (isProduction && hasKeyInput) {
-        console.log("❌ 移動ベクトルが0 - 移動処理スキップ");
-      }
     }
   }
 
@@ -728,33 +586,11 @@ class Game {
    * PC用の移動処理
    */
   private updatePCMovement(moveVector: THREE.Vector3): void {
-    // デバッグ用ログ（本番環境での問題調査）
-    const isProduction =
-      typeof window !== "undefined" &&
-      window.location &&
-      window.location.hostname === "koba-1423.github.io";
-
-    // キー入力がある場合のみログを表示
-    const hasKeyInput = Object.keys(this.keys).some((key) => this.keys[key]);
-    if (isProduction && hasKeyInput) {
-      console.log("🎮 PC移動処理開始:", {
-        keys: Object.keys(this.keys).filter((key) => this.keys[key]),
-        beforeMoveVector: { x: moveVector.x, y: moveVector.y, z: moveVector.z },
-      });
-    }
-
     // 矢印キーとWASDキーに対応
     if (this.keys["KeyW"] || this.keys["ArrowUp"]) moveVector.z -= 1;
     if (this.keys["KeyS"] || this.keys["ArrowDown"]) moveVector.z += 1;
     if (this.keys["KeyA"] || this.keys["ArrowLeft"]) moveVector.x -= 1;
     if (this.keys["KeyD"] || this.keys["ArrowRight"]) moveVector.x += 1;
-
-    if (isProduction && hasKeyInput) {
-      console.log("🎮 PC移動処理終了:", {
-        afterMoveVector: { x: moveVector.x, y: moveVector.y, z: moveVector.z },
-        length: moveVector.length(),
-      });
-    }
   }
 
   /**
@@ -1252,54 +1088,12 @@ class Game {
 
 // ゲームを開始
 window.addEventListener("load", () => {
-  console.log("🚀 ゲーム初期化開始 (load event)");
   new Game();
 });
 
 // DOMContentLoadedでも初期化（本番環境での互換性向上）
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🚀 ゲーム初期化開始 (DOMContentLoaded event)");
   if (!window.game) {
     window.game = new Game();
   }
 });
-
-// 本番環境での追加デバッグ
-if (
-  typeof window !== "undefined" &&
-  window.location &&
-  window.location.hostname === "koba-1423.github.io"
-) {
-  console.log("🌐 本番環境検出");
-  console.log("- 現在のURL:", window.location.href);
-  console.log("- プロトコル:", window.location.protocol);
-  console.log("- ホスト:", window.location.hostname);
-
-  // 本番環境でのフォーカス確保
-  const ensureFocus = () => {
-    if (document.body) {
-      document.body.focus();
-      document.body.tabIndex = -1;
-      console.log("🎯 フォーカス確保実行");
-    }
-  };
-
-  // 複数のタイミングでフォーカス確保
-  setTimeout(ensureFocus, 500);
-  setTimeout(ensureFocus, 1000);
-  setTimeout(ensureFocus, 2000);
-
-  // ユーザーインタラクション時にフォーカス確保
-  document.addEventListener("click", ensureFocus);
-  document.addEventListener("touchstart", ensureFocus);
-  document.addEventListener("keydown", ensureFocus);
-
-  // イベントリスナーの状態確認
-  setTimeout(() => {
-    console.log("🔍 イベントリスナー状態確認:");
-    console.log("- document readyState:", document.readyState);
-    console.log("- window loaded:", document.readyState === "complete");
-    console.log("- document.activeElement:", document.activeElement?.tagName);
-    console.log("- document.hasFocus():", document.hasFocus());
-  }, 1000);
-}

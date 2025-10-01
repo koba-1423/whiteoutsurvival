@@ -52,8 +52,8 @@ export default [
           varsIgnorePattern: "^_",
         },
       ],
-      // コンソールログの使用を禁止（デバッグ時は一時的に許可）
-      "no-console": "warn",
+      // コンソールログの使用を禁止
+      "no-console": "error",
       // 型定義の未使用変数を許可
       "@typescript-eslint/no-unused-vars": [
         "error",
