@@ -6,6 +6,13 @@ import {
   calculateDefense,
 } from "./state/frost_survival_design.js";
 
+// グローバル型定義
+declare global {
+  interface Window {
+    game?: Game;
+  }
+}
+
 /**
  * メインゲームクラス
  */
@@ -91,8 +98,6 @@ class Game {
           window.navigator.userAgent
         );
     }
-
-    console.log(`デバイス検出: ${this.isMobile ? "モバイル" : "PC"}`);
   }
 
   /**
@@ -271,16 +276,24 @@ class Game {
   private setupPCControls(): void {
     // キーボードイベント（矢印キー対応）
     document.addEventListener("keydown", (event) => {
+      event.preventDefault();
       this.keys[event.code] = true;
     });
 
     document.addEventListener("keyup", (event) => {
+      event.preventDefault();
       this.keys[event.code] = false;
     });
 
     // クリックイベント（攻撃）
-    document.addEventListener("click", () => {
+    document.addEventListener("click", (event) => {
+      event.preventDefault();
       this.handlePlayerAttack();
+    });
+
+    // フォーカスが外れた時の処理
+    window.addEventListener("blur", () => {
+      this.keys = {};
     });
   }
 
@@ -790,7 +803,6 @@ class Game {
    */
   private showAttackEffect(): void {
     // 攻撃エフェクトの実装（将来的にパーティクルエフェクトなど）
-    console.log("攻撃！");
   }
 
   /**
@@ -945,14 +957,12 @@ class Game {
    */
   private showEnemyAttackEffect(_position: THREE.Vector3): void {
     // 敵の攻撃エフェクト（将来的にパーティクルエフェクトなど）
-    console.log("敵の攻撃！");
   }
 
   /**
    * プレイヤーの死亡処理
    */
   private handlePlayerDeath(): void {
-    console.log("ゲームオーバー！");
     // 将来的にゲームオーバー画面を表示
     this.state.health = this.state.maxHealth; // 一時的に体力を回復
   }
@@ -1067,4 +1077,11 @@ class Game {
 // ゲームを開始
 window.addEventListener("load", () => {
   new Game();
+});
+
+// DOMContentLoadedでも初期化（本番環境での互換性向上）
+document.addEventListener("DOMContentLoaded", () => {
+  if (!window.game) {
+    window.game = new Game();
+  }
 });
