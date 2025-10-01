@@ -672,13 +672,17 @@ class Game {
       window.location &&
       window.location.hostname === "koba-1423.github.io";
 
-    if (isProduction) {
+    // キー入力がある場合のみログを表示
+    const hasKeyInput = Object.keys(this.keys).some((key) => this.keys[key]);
+    if (isProduction && hasKeyInput) {
       console.log("🔍 移動処理チェック:", {
         moveVectorLength: moveVector.length(),
         moveVector: { x: moveVector.x, y: moveVector.y, z: moveVector.z },
         deltaTime: deltaTime,
         moveSpeed: moveSpeed,
         playerMeshExists: !!this.playerMesh,
+        keys: Object.keys(this.keys).filter((key) => this.keys[key]),
+        isMobile: this.isMobile,
       });
     }
 
@@ -714,7 +718,7 @@ class Game {
         });
       }
     } else {
-      if (isProduction) {
+      if (isProduction && hasKeyInput) {
         console.log("❌ 移動ベクトルが0 - 移動処理スキップ");
       }
     }
@@ -724,21 +728,30 @@ class Game {
    * PC用の移動処理
    */
   private updatePCMovement(moveVector: THREE.Vector3): void {
+    // デバッグ用ログ（本番環境での問題調査）
+    const isProduction =
+      typeof window !== "undefined" &&
+      window.location &&
+      window.location.hostname === "koba-1423.github.io";
+
+    // キー入力がある場合のみログを表示
+    const hasKeyInput = Object.keys(this.keys).some((key) => this.keys[key]);
+    if (isProduction && hasKeyInput) {
+      console.log("🎮 PC移動処理開始:", {
+        keys: Object.keys(this.keys).filter((key) => this.keys[key]),
+        beforeMoveVector: { x: moveVector.x, y: moveVector.y, z: moveVector.z },
+      });
+    }
+
     // 矢印キーとWASDキーに対応
     if (this.keys["KeyW"] || this.keys["ArrowUp"]) moveVector.z -= 1;
     if (this.keys["KeyS"] || this.keys["ArrowDown"]) moveVector.z += 1;
     if (this.keys["KeyA"] || this.keys["ArrowLeft"]) moveVector.x -= 1;
     if (this.keys["KeyD"] || this.keys["ArrowRight"]) moveVector.x += 1;
 
-    // デバッグ用ログ（本番環境での問題調査）
-    const isProduction =
-      typeof window !== "undefined" &&
-      window.location &&
-      window.location.hostname === "koba-1423.github.io";
-    if (isProduction && moveVector.length() > 0) {
-      console.log("🎮 移動入力検出:", {
-        keys: Object.keys(this.keys).filter((key) => this.keys[key]),
-        moveVector: { x: moveVector.x, z: moveVector.z },
+    if (isProduction && hasKeyInput) {
+      console.log("🎮 PC移動処理終了:", {
+        afterMoveVector: { x: moveVector.x, y: moveVector.y, z: moveVector.z },
         length: moveVector.length(),
       });
     }
