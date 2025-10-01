@@ -303,7 +303,7 @@ class Game {
         document.body.focus();
         document.body.tabIndex = -1;
       }
-      
+
       event.preventDefault();
       this.handlePlayerAttack();
 
@@ -365,13 +365,24 @@ class Game {
     // 本番環境では追加のフォーカス確保
     if (isProduction) {
       // ページロード後にフォーカスを確保
+      const focusAttempts = [500, 1000, 1500, 2000, 3000];
+      focusAttempts.forEach((delay) => {
+        setTimeout(() => {
+          if (document.body) {
+            document.body.focus();
+            document.body.tabIndex = -1;
+            console.log(`🎯 フォーカス確保試行 (${delay}ms)`);
+          }
+        }, delay);
+      });
+
+      // キーイベントが検出されない場合の警告
       setTimeout(() => {
-        if (document.body) {
-          document.body.focus();
-          document.body.tabIndex = -1;
-          console.log("🎯 フォーカス確保完了");
-        }
-      }, 1000);
+        console.log("⚠️ キーイベント検出テスト開始");
+        console.log("- フォーカス状態:", document.hasFocus());
+        console.log("- アクティブ要素:", document.activeElement?.tagName);
+        console.log("- キーイベントリスナー設定済み");
+      }, 5000);
     }
   }
 
@@ -1190,10 +1201,31 @@ if (
   console.log("- プロトコル:", window.location.protocol);
   console.log("- ホスト:", window.location.hostname);
 
+  // 本番環境でのフォーカス確保
+  const ensureFocus = () => {
+    if (document.body) {
+      document.body.focus();
+      document.body.tabIndex = -1;
+      console.log("🎯 フォーカス確保実行");
+    }
+  };
+
+  // 複数のタイミングでフォーカス確保
+  setTimeout(ensureFocus, 500);
+  setTimeout(ensureFocus, 1000);
+  setTimeout(ensureFocus, 2000);
+
+  // ユーザーインタラクション時にフォーカス確保
+  document.addEventListener("click", ensureFocus);
+  document.addEventListener("touchstart", ensureFocus);
+  document.addEventListener("keydown", ensureFocus);
+
   // イベントリスナーの状態確認
   setTimeout(() => {
     console.log("🔍 イベントリスナー状態確認:");
     console.log("- document readyState:", document.readyState);
     console.log("- window loaded:", document.readyState === "complete");
+    console.log("- document.activeElement:", document.activeElement?.tagName);
+    console.log("- document.hasFocus():", document.hasFocus());
   }, 1000);
 }
