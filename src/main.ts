@@ -98,6 +98,19 @@ class Game {
           window.navigator.userAgent
         );
     }
+
+    // デバッグ用ログ（本番環境での問題調査）
+    if (typeof window !== "undefined" && window.location) {
+      const isProduction = window.location.hostname === "koba-1423.github.io";
+      if (isProduction) {
+        console.log("🔍 本番環境デバッグ情報:");
+        console.log("- デバイス:", this.isMobile ? "モバイル" : "PC");
+        console.log("- URL:", window.location.href);
+        console.log("- User Agent:", window.navigator.userAgent);
+        console.log("- Touch Support:", "ontouchstart" in window);
+        console.log("- Max Touch Points:", window.navigator.maxTouchPoints);
+      }
+    }
   }
 
   /**
@@ -274,26 +287,47 @@ class Game {
    * PC用の操作を設定
    */
   private setupPCControls(): void {
+    // デバッグ用ログ（本番環境での問題調査）
+    const isProduction = typeof window !== "undefined" && window.location && window.location.hostname === "koba-1423.github.io";
+    if (isProduction) {
+      console.log("🎮 PC操作設定開始");
+    }
+
     // キーボードイベント（矢印キー対応）
     document.addEventListener("keydown", (event) => {
       event.preventDefault();
       this.keys[event.code] = true;
+      
+      if (isProduction) {
+        console.log("⌨️ キー押下:", event.code, "現在のキー状態:", Object.keys(this.keys).filter(key => this.keys[key]));
+      }
     });
 
     document.addEventListener("keyup", (event) => {
       event.preventDefault();
       this.keys[event.code] = false;
+      
+      if (isProduction) {
+        console.log("⌨️ キー離上:", event.code, "現在のキー状態:", Object.keys(this.keys).filter(key => this.keys[key]));
+      }
     });
 
     // クリックイベント（攻撃）
     document.addEventListener("click", (event) => {
       event.preventDefault();
       this.handlePlayerAttack();
+      
+      if (isProduction) {
+        console.log("🖱️ クリック攻撃");
+      }
     });
 
     // フォーカスが外れた時の処理
     window.addEventListener("blur", () => {
       this.keys = {};
+      if (isProduction) {
+        console.log("👁️ フォーカス外れ - キー状態リセット");
+      }
     });
   }
 
@@ -579,6 +613,16 @@ class Game {
     if (this.keys["KeyS"] || this.keys["ArrowDown"]) moveVector.z += 1;
     if (this.keys["KeyA"] || this.keys["ArrowLeft"]) moveVector.x -= 1;
     if (this.keys["KeyD"] || this.keys["ArrowRight"]) moveVector.x += 1;
+
+    // デバッグ用ログ（本番環境での問題調査）
+    const isProduction = typeof window !== "undefined" && window.location && window.location.hostname === "koba-1423.github.io";
+    if (isProduction && moveVector.length() > 0) {
+      console.log("🎮 移動入力検出:", {
+        keys: Object.keys(this.keys).filter(key => this.keys[key]),
+        moveVector: { x: moveVector.x, z: moveVector.z },
+        length: moveVector.length()
+      });
+    }
   }
 
   /**
@@ -1076,12 +1120,29 @@ class Game {
 
 // ゲームを開始
 window.addEventListener("load", () => {
+  console.log("🚀 ゲーム初期化開始 (load event)");
   new Game();
 });
 
 // DOMContentLoadedでも初期化（本番環境での互換性向上）
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("🚀 ゲーム初期化開始 (DOMContentLoaded event)");
   if (!window.game) {
     window.game = new Game();
   }
 });
+
+// 本番環境での追加デバッグ
+if (typeof window !== "undefined" && window.location && window.location.hostname === "koba-1423.github.io") {
+  console.log("🌐 本番環境検出");
+  console.log("- 現在のURL:", window.location.href);
+  console.log("- プロトコル:", window.location.protocol);
+  console.log("- ホスト:", window.location.hostname);
+  
+  // イベントリスナーの状態確認
+  setTimeout(() => {
+    console.log("🔍 イベントリスナー状態確認:");
+    console.log("- document readyState:", document.readyState);
+    console.log("- window loaded:", document.readyState === "complete");
+  }, 1000);
+}
