@@ -161,9 +161,6 @@ class Game {
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    // フィールド（三角形エリア）を削除してガビガビ動く問題を解決
-    // this.createFieldTriangles();
-
     // 雪のパーティクルシステムを作成
     this.createSnowParticles();
   }
@@ -459,59 +456,6 @@ class Game {
   }
 
   /**
-   * 三角形エリアを作成
-   */
-  private createFieldTriangles(): void {
-    // 中心点
-    const center = new THREE.Vector3(0, 0, 0);
-
-    // 4つの三角形の頂点
-    const topLeft = new THREE.Vector3(-50, 0, 50);
-    const topRight = new THREE.Vector3(50, 0, 50);
-    const bottomLeft = new THREE.Vector3(-50, 0, -50);
-    const bottomRight = new THREE.Vector3(50, 0, -50);
-
-    // 三角形エリアの色
-    const colors = [0x66ffff, 0xffff66, 0x6666ff, 0x90ee90];
-    const positions = [
-      [center, topLeft, topRight], // 上（北）
-      [center, topRight, bottomRight], // 右（東）
-      [center, bottomRight, bottomLeft], // 下（南）
-      [center, bottomLeft, topLeft], // 左（西）
-    ];
-
-    positions.forEach((triangle, index) => {
-      this.createTriangleArea(triangle, colors[index]);
-    });
-  }
-
-  /**
-   * 三角形エリアを作成
-   */
-  private createTriangleArea(vertices: THREE.Vector3[], color: number): void {
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(9);
-
-    vertices.forEach((vertex, index) => {
-      positions[index * 3] = vertex.x;
-      positions[index * 3 + 1] = vertex.y;
-      positions[index * 3 + 2] = vertex.z;
-    });
-
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-
-    const material = new THREE.MeshBasicMaterial({
-      color: color,
-      transparent: true,
-      opacity: 0.3,
-      side: THREE.DoubleSide,
-    });
-
-    const mesh = new THREE.Mesh(geometry, material);
-    this.scene.add(mesh);
-  }
-
-  /**
    * 敵を生成
    */
   private spawnEnemies(): void {
@@ -754,9 +698,7 @@ class Game {
   private levelUp(): void {
     this.state.level += 1;
     this.state.maxHealth += 20;
-    this.state.maxStamina += 10;
     this.state.health = this.state.maxHealth; // 体力全回復
-    this.state.stamina = this.state.maxStamina; // スタミナ全回復
 
     // レベルアップエフェクト
     this.showLevelUpEffect();
