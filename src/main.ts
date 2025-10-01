@@ -288,39 +288,64 @@ class Game {
    */
   private setupPCControls(): void {
     // デバッグ用ログ（本番環境での問題調査）
-    const isProduction = typeof window !== "undefined" && window.location && window.location.hostname === "koba-1423.github.io";
+    const isProduction =
+      typeof window !== "undefined" &&
+      window.location &&
+      window.location.hostname === "koba-1423.github.io";
     if (isProduction) {
       console.log("🎮 PC操作設定開始");
     }
 
-    // キーボードイベント（矢印キー対応）
-    document.addEventListener("keydown", (event) => {
-      event.preventDefault();
-      this.keys[event.code] = true;
-      
-      if (isProduction) {
-        console.log("⌨️ キー押下:", event.code, "現在のキー状態:", Object.keys(this.keys).filter(key => this.keys[key]));
-      }
-    });
-
-    document.addEventListener("keyup", (event) => {
-      event.preventDefault();
-      this.keys[event.code] = false;
-      
-      if (isProduction) {
-        console.log("⌨️ キー離上:", event.code, "現在のキー状態:", Object.keys(this.keys).filter(key => this.keys[key]));
-      }
-    });
-
-    // クリックイベント（攻撃）
+    // フォーカスを確保するためのクリックイベント
     document.addEventListener("click", (event) => {
+      // フォーカスを確保
+      if (document.body) {
+        document.body.focus();
+        document.body.tabIndex = -1;
+      }
+      
       event.preventDefault();
       this.handlePlayerAttack();
-      
+
       if (isProduction) {
-        console.log("🖱️ クリック攻撃");
+        console.log("🖱️ クリック攻撃 - フォーカス確保");
       }
     });
+
+    // キーボードイベント（矢印キー対応）- documentとwindowの両方に設定
+    const keyHandler = (event: KeyboardEvent) => {
+      event.preventDefault();
+      this.keys[event.code] = true;
+
+      if (isProduction) {
+        console.log(
+          "⌨️ キー押下:",
+          event.code,
+          "現在のキー状態:",
+          Object.keys(this.keys).filter((key) => this.keys[key])
+        );
+      }
+    };
+
+    const keyUpHandler = (event: KeyboardEvent) => {
+      event.preventDefault();
+      this.keys[event.code] = false;
+
+      if (isProduction) {
+        console.log(
+          "⌨️ キー離上:",
+          event.code,
+          "現在のキー状態:",
+          Object.keys(this.keys).filter((key) => this.keys[key])
+        );
+      }
+    };
+
+    // documentとwindowの両方にイベントリスナーを追加
+    document.addEventListener("keydown", keyHandler);
+    document.addEventListener("keyup", keyUpHandler);
+    window.addEventListener("keydown", keyHandler);
+    window.addEventListener("keyup", keyUpHandler);
 
     // フォーカスが外れた時の処理
     window.addEventListener("blur", () => {
@@ -329,6 +354,25 @@ class Game {
         console.log("👁️ フォーカス外れ - キー状態リセット");
       }
     });
+
+    // フォーカスが戻った時の処理
+    window.addEventListener("focus", () => {
+      if (isProduction) {
+        console.log("👁️ フォーカス復帰");
+      }
+    });
+
+    // 本番環境では追加のフォーカス確保
+    if (isProduction) {
+      // ページロード後にフォーカスを確保
+      setTimeout(() => {
+        if (document.body) {
+          document.body.focus();
+          document.body.tabIndex = -1;
+          console.log("🎯 フォーカス確保完了");
+        }
+      }, 1000);
+    }
   }
 
   /**
@@ -615,12 +659,15 @@ class Game {
     if (this.keys["KeyD"] || this.keys["ArrowRight"]) moveVector.x += 1;
 
     // デバッグ用ログ（本番環境での問題調査）
-    const isProduction = typeof window !== "undefined" && window.location && window.location.hostname === "koba-1423.github.io";
+    const isProduction =
+      typeof window !== "undefined" &&
+      window.location &&
+      window.location.hostname === "koba-1423.github.io";
     if (isProduction && moveVector.length() > 0) {
       console.log("🎮 移動入力検出:", {
-        keys: Object.keys(this.keys).filter(key => this.keys[key]),
+        keys: Object.keys(this.keys).filter((key) => this.keys[key]),
         moveVector: { x: moveVector.x, z: moveVector.z },
-        length: moveVector.length()
+        length: moveVector.length(),
       });
     }
   }
@@ -1133,12 +1180,16 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // 本番環境での追加デバッグ
-if (typeof window !== "undefined" && window.location && window.location.hostname === "koba-1423.github.io") {
+if (
+  typeof window !== "undefined" &&
+  window.location &&
+  window.location.hostname === "koba-1423.github.io"
+) {
   console.log("🌐 本番環境検出");
   console.log("- 現在のURL:", window.location.href);
   console.log("- プロトコル:", window.location.protocol);
   console.log("- ホスト:", window.location.hostname);
-  
+
   // イベントリスナーの状態確認
   setTimeout(() => {
     console.log("🔍 イベントリスナー状態確認:");
