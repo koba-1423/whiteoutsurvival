@@ -2,8 +2,16 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❄️</text></svg>"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Permissions-Policy"
+      content="browsing-topics=(), camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+    />
     <title>ルちゃんサバイバル</title>
     <style>
       * {
@@ -11,21 +19,21 @@
         padding: 0;
         box-sizing: border-box;
       }
-      
+
       body {
-        font-family: 'Arial', sans-serif;
+        font-family: "Arial", sans-serif;
         background: #000;
         color: #fff;
         overflow: hidden;
         cursor: default;
       }
-      
+
       canvas {
         display: block;
         width: 100vw;
         height: 100vh;
       }
-      
+
       /* ゲームUI */
       .game-ui {
         position: fixed;
@@ -36,7 +44,7 @@
         pointer-events: none;
         z-index: 1000;
       }
-      
+
       /* ヘッダーHUD */
       .hud-header {
         position: absolute;
@@ -52,13 +60,13 @@
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
-      
+
       .resource-group {
         display: flex;
         gap: 30px;
         align-items: center;
       }
-      
+
       .resource-item {
         display: flex;
         align-items: center;
@@ -66,7 +74,7 @@
         font-size: 18px;
         font-weight: bold;
       }
-      
+
       .resource-icon {
         width: 24px;
         height: 24px;
@@ -77,20 +85,20 @@
         justify-content: center;
         font-size: 14px;
       }
-      
+
       .control-group {
         display: flex;
         align-items: center;
         gap: 20px;
       }
-      
+
       .control-status {
         display: flex;
         align-items: center;
         gap: 10px;
         font-size: 16px;
       }
-      
+
       .status-indicator {
         width: 12px;
         height: 12px;
@@ -98,12 +106,12 @@
         background: #ff4444;
         box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
       }
-      
+
       .status-indicator.status-on {
         background: #44ff44;
         box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
       }
-      
+
       /* ミニマップ */
       .minimap {
         position: absolute;
@@ -116,13 +124,13 @@
         border-radius: 10px;
         overflow: hidden;
       }
-      
+
       .minimap-canvas {
         width: 100%;
         height: 100%;
         background: #1a1a1a;
       }
-      
+
       /* ゾーン情報 */
       .zone-info {
         position: absolute;
@@ -134,44 +142,44 @@
         border: 1px solid #333;
         min-width: 300px;
       }
-      
+
       .zone-title {
         font-size: 20px;
         font-weight: bold;
         margin-bottom: 10px;
         color: #00aaff;
       }
-      
+
       .zone-description {
         font-size: 14px;
         line-height: 1.4;
         color: #ccc;
         margin-bottom: 15px;
       }
-      
+
       .zone-stats {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
         font-size: 14px;
       }
-      
+
       .stat-item {
         display: flex;
         justify-content: space-between;
         padding: 5px 0;
         border-bottom: 1px solid #333;
       }
-      
+
       .stat-label {
         color: #aaa;
       }
-      
+
       .stat-value {
         color: #fff;
         font-weight: bold;
       }
-      
+
       /* 戦闘オーバーレイ */
       .combat-overlay {
         position: absolute;
@@ -190,18 +198,24 @@
         transition: opacity 0.3s ease;
         pointer-events: none;
       }
-      
+
       .combat-overlay.active {
         opacity: 1;
         animation: pulse 0.5s ease-in-out;
       }
-      
+
       @keyframes pulse {
-        0% { transform: translate(-50%, -50%) scale(1); }
-        50% { transform: translate(-50%, -50%) scale(1.1); }
-        100% { transform: translate(-50%, -50%) scale(1); }
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+        }
+        50% {
+          transform: translate(-50%, -50%) scale(1.1);
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+        }
       }
-      
+
       /* ダメージテキスト */
       .damage-text {
         position: absolute;
@@ -213,7 +227,7 @@
         z-index: 2000;
         animation: damageFloat 2s ease-out forwards;
       }
-      
+
       @keyframes damageFloat {
         0% {
           opacity: 1;
@@ -224,7 +238,7 @@
           transform: translateY(-50px) scale(1.2);
         }
       }
-      
+
       /* ローディング画面 */
       .loading-screen {
         position: fixed;
@@ -240,7 +254,7 @@
         z-index: 2000;
         transition: opacity 0.5s ease-out;
       }
-      
+
       .loading-text {
         color: #00aaff;
         font-size: 32px;
@@ -248,7 +262,7 @@
         margin-bottom: 20px;
         text-shadow: 0 0 20px rgba(0, 170, 255, 1);
       }
-      
+
       .loading-bar {
         width: 300px;
         height: 6px;
@@ -256,7 +270,7 @@
         border-radius: 3px;
         overflow: hidden;
       }
-      
+
       .loading-progress {
         height: 100%;
         background: linear-gradient(90deg, #00aaff, #ffffff);
@@ -264,7 +278,7 @@
         transition: width 0.3s ease;
         box-shadow: 0 0 10px rgba(0, 170, 255, 0.8);
       }
-      
+
       /* ミニマップ */
       .minimap {
         position: absolute;
@@ -277,13 +291,13 @@
         border-radius: 10px;
         overflow: hidden;
       }
-      
+
       .minimap-canvas {
         width: 100%;
         height: 100%;
         background: #1a1a1a;
       }
-      
+
       /* レスポンシブデザイン */
       @media (max-width: 768px) {
         .hud-header {
@@ -291,22 +305,22 @@
           gap: 15px;
           padding: 10px;
         }
-        
+
         .resource-group {
           gap: 15px;
         }
-        
+
         .resource-item {
           font-size: 16px;
         }
-        
+
         .minimap {
           width: 150px;
           height: 150px;
           top: 10px;
           right: 10px;
         }
-        
+
         .zone-info {
           bottom: 10px;
           left: 10px;
@@ -315,9 +329,9 @@
         }
       }
     </style>
-    <script type="module" crossorigin src="/whiteoutsurvival/assets/index-DKUpXLGr.js"></script>
+    <script type="module" crossorigin src="/whiteoutsurvival/assets/index-laIQ4NNm.js"></script>
   </head>
-  <body>
+  <body tabindex="0">
     <!-- ローディング画面 -->
     <div class="loading-screen" id="loadingScreen">
       <div class="loading-text">ルちゃんサバイバル</div>
@@ -325,7 +339,7 @@
         <div class="loading-progress" id="loadingProgress"></div>
       </div>
     </div>
-    
+
     <!-- ゲームUI -->
     <div class="game-ui">
       <!-- ヘッダーHUD -->
@@ -333,7 +347,11 @@
         <div class="resource-group">
           <div class="resource-item">
             <div class="resource-icon">❤️</div>
-            <span>体力: <span id="healthCount">100</span>/<span id="maxHealthCount">100</span></span>
+            <span
+              >体力: <span id="healthCount">100</span>/<span id="maxHealthCount"
+                >100</span
+              ></span
+            >
           </div>
           <div class="resource-item">
             <div class="resource-icon">🥩</div>
@@ -348,7 +366,7 @@
             <span>お金: <span id="moneyCount">0</span></span>
           </div>
         </div>
-        
+
         <div class="control-group">
           <div class="control-status">
             <span>レベル: <span id="levelCount">1</span></span>
@@ -365,12 +383,12 @@
           </div>
         </div>
       </div>
-      
+
       <!-- ミニマップ -->
       <div class="minimap">
         <canvas class="minimap-canvas" id="minimapCanvas"></canvas>
       </div>
-      
+
       <!-- ゾーン情報 -->
       <div class="zone-info">
         <div class="zone-title">氷雪の荒野</div>
@@ -396,13 +414,11 @@
           </div>
         </div>
       </div>
-      
+
       <!-- 戦闘オーバーレイ -->
-      <div class="combat-overlay" id="combatOverlay">
-        戦闘中！
-      </div>
+      <div class="combat-overlay" id="combatOverlay">戦闘中！</div>
     </div>
-    
+
   </body>
 </html>
 <!-- テストコメント -->

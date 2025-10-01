@@ -41,7 +41,7 @@ class Game {
   private isTouching: boolean = false;
 
   // 敵管理
-  private enemies: THREE.Mesh[] = [];
+  private enemies: THREE.Object3D[] = [];
   private enemySpeed: number = 2.0;
   private enemyAttackRange: number = 1.5;
   private enemyAttackCooldown: number = 2.0;
@@ -481,23 +481,87 @@ class Game {
   }
 
   /**
+   * シロクマモデルを作成
+   */
+  private createPolarBearModel(): THREE.Group {
+    const group = new THREE.Group();
+    const whiteMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+
+    // 体
+    const bodyGeometry = new THREE.SphereGeometry(0.4, 12, 12);
+    const body = new THREE.Mesh(bodyGeometry, whiteMaterial);
+    body.scale.set(1, 0.8, 1.2);
+    body.position.y = 0.3;
+    body.castShadow = true;
+    body.name = "body";
+    group.add(body);
+
+    // 頭
+    const headGeometry = new THREE.SphereGeometry(0.25, 12, 12);
+    const head = new THREE.Mesh(headGeometry, whiteMaterial);
+    head.position.set(0, 0.5, 0.4);
+    head.castShadow = true;
+    head.name = "head";
+    group.add(head);
+
+    // 耳（左右）
+    const earGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+    const leftEar = new THREE.Mesh(earGeometry, whiteMaterial);
+    leftEar.position.set(-0.15, 0.65, 0.4);
+    leftEar.castShadow = true;
+    group.add(leftEar);
+
+    const rightEar = new THREE.Mesh(earGeometry, whiteMaterial);
+    rightEar.position.set(0.15, 0.65, 0.4);
+    rightEar.castShadow = true;
+    group.add(rightEar);
+
+    // 鼻
+    const noseGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+    const noseMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+    nose.position.set(0, 0.5, 0.62);
+    nose.castShadow = true;
+    group.add(nose);
+
+    // 脚（4本）- 名前をつけてアニメーションできるようにする
+    const legGeometry = new THREE.CylinderGeometry(0.08, 0.1, 0.3, 8);
+    const positions = [
+      { x: -0.2, z: 0.2, name: "legFrontLeft" },
+      { x: 0.2, z: 0.2, name: "legFrontRight" },
+      { x: -0.2, z: -0.2, name: "legBackLeft" },
+      { x: 0.2, z: -0.2, name: "legBackRight" },
+    ];
+
+    positions.forEach((pos) => {
+      const leg = new THREE.Mesh(legGeometry, whiteMaterial);
+      leg.position.set(pos.x, 0.05, pos.z);
+      leg.castShadow = true;
+      leg.name = pos.name;
+      group.add(leg);
+    });
+
+    return group;
+  }
+
+  /**
    * 敵を生成
    */
   private spawnEnemies(): void {
-    // 敵のジオメトリとマテリアル
-    const enemyGeometry = new THREE.SphereGeometry(0.3, 12, 12);
-    const enemyMaterial = new THREE.MeshStandardMaterial({ color: 0xaa0000 });
-
     // 敵を生成
     for (let i = 0; i < 30; i++) {
-      const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
+      const enemy = this.createPolarBearModel();
 
-      // ランダムな位置に配置
+      // 主人公の上半分（画面上側）にランダムに配置
       const x = (Math.random() - 0.5) * 100;
-      const z = (Math.random() - 0.5) * 100;
-      enemy.position.set(x, 0.3, z);
-      enemy.castShadow = true;
-      enemy.receiveShadow = true;
+      const z = -Math.random() * 50; // 0から-50の範囲（上半分）
+      enemy.position.set(x, 0, z);
+
+      // 大きさを3倍にする
+      enemy.scale.set(3, 3, 3);
+
+      // 主人公の方向を向ける（主人公は原点にいる）
+      enemy.lookAt(0, 0, 0);
 
       this.scene.add(enemy);
       this.enemies.push(enemy);
@@ -662,7 +726,7 @@ class Game {
   /**
    * 敵にダメージを与える
    */
-  private damageEnemy(enemy: THREE.Mesh): void {
+  private damageEnemy(enemy: THREE.Object3D): void {
     // ダメージ計算
     const damage = this.calculatePlayerDamage();
 
@@ -876,6 +940,12 @@ class Game {
           direction.multiplyScalar(this.enemySpeed * deltaTime)
         );
 
+        // プレイヤーの方を向く
+        enemy.lookAt(this.playerMesh!.position);
+
+        // 歩くアニメーション
+        this.animateWalking(enemy, currentTime);
+
         // 攻撃範囲内で攻撃
         if (distance <= this.enemyAttackRange) {
           if (currentTime - this.lastEnemyAttack >= this.enemyAttackCooldown) {
@@ -888,9 +958,46 @@ class Game {
   }
 
   /**
+   * 歩くアニメーション
+   */
+  private animateWalking(enemy: THREE.Object3D, currentTime: number): void {
+    // 歩行サイクルの速度
+    const walkSpeed = 4.0;
+    const walkCycle = Math.sin(currentTime * walkSpeed);
+
+    // 脚を取得
+    const legFrontLeft = enemy.getObjectByName("legFrontLeft");
+    const legFrontRight = enemy.getObjectByName("legFrontRight");
+    const legBackLeft = enemy.getObjectByName("legBackLeft");
+    const legBackRight = enemy.getObjectByName("legBackRight");
+
+    // 体を取得
+    const body = enemy.getObjectByName("body");
+
+    // 脚を前後に動かす（前左と後右が同期、前右と後左が同期）
+    if (legFrontLeft) {
+      legFrontLeft.rotation.x = walkCycle * 0.3;
+    }
+    if (legBackRight) {
+      legBackRight.rotation.x = walkCycle * 0.3;
+    }
+    if (legFrontRight) {
+      legFrontRight.rotation.x = -walkCycle * 0.3;
+    }
+    if (legBackLeft) {
+      legBackLeft.rotation.x = -walkCycle * 0.3;
+    }
+
+    // 体を上下に揺らす
+    if (body) {
+      body.position.y = 0.3 + Math.abs(walkCycle) * 0.05;
+    }
+  }
+
+  /**
    * 敵の攻撃処理
    */
-  private handleEnemyAttack(enemy: THREE.Mesh): void {
+  private handleEnemyAttack(enemy: THREE.Object3D): void {
     if (!this.playerMesh) return;
 
     // プレイヤーにダメージ
