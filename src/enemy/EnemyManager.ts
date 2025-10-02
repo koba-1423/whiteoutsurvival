@@ -86,17 +86,18 @@ export class EnemyManager {
     // プレイヤーがセーフゾーン内にいるかどうか
     const isPlayerInSafeZone = playerDistanceFromOrigin < this.safeZoneRadius;
 
-    // 追跡を開始する距離（スポーンエリアの範囲から計算）
-    const chaseDistance = Math.max(
-      this.spawnAreaWidth / 2,
-      this.spawnAreaDepth
-    );
+    // プレイヤーがスポーンエリア内にいるかどうか
+    const isPlayerInSpawnArea =
+      playerPosition.x >= -this.spawnAreaWidth / 2 &&
+      playerPosition.x <= this.spawnAreaWidth / 2 &&
+      playerPosition.z <= 0 &&
+      playerPosition.z >= -this.spawnAreaDepth;
 
     this.enemies.forEach((enemy) => {
       const distance = enemy.position.distanceTo(playerPosition);
 
-      if (distance < chaseDistance && !isPlayerInSafeZone) {
-        // プレイヤーがセーフゾーン外にいて、追跡範囲内の場合のみ向かっていく
+      if (isPlayerInSpawnArea && !isPlayerInSafeZone && distance < 100) {
+        // プレイヤーがスポーンエリア内かつセーフゾーン外にいる場合のみ向かっていく
         const direction = new THREE.Vector3()
           .subVectors(playerPosition, enemy.position)
           .normalize();
