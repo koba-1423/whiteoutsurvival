@@ -7,6 +7,7 @@ import {
 import { createPlayerModel } from "../models/PlayerModel.js";
 import { createSwordModel } from "../models/WeaponModel.js";
 import { EffectManager } from "../ui/EffectManager.js";
+import type { EnemyManager } from "../enemy/EnemyManager.js";
 
 /**
  * プレイヤー管理クラス
@@ -70,6 +71,16 @@ export class PlayerManager {
       moveVector.multiplyScalar(moveSpeed * deltaTime);
       this.mesh.position.add(moveVector);
     }
+  }
+
+  /**
+   * プレイヤーの状態を更新
+   * 攻撃範囲内に敵がいれば自動的に攻撃します
+   */
+  public update(enemyManager: EnemyManager, state: GameState): void {
+    this.handleAttack(enemyManager.getEnemies(), (enemy) => {
+      enemyManager.damageEnemy(enemy, this, state);
+    });
   }
 
   /**

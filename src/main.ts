@@ -69,22 +69,12 @@ class Game {
 
     // 入力マネージャーを作成
     this.inputManager = new InputManager();
-    this.inputManager.setAttackCallback(() => this.handlePlayerAttack());
 
     // 雪のパーティクルを作成
     this.snowParticles = new SnowParticles(this.sceneManager.scene);
 
     // ゲームループを開始
     this.startGameLoop();
-  }
-
-  /**
-   * プレイヤーの攻撃処理
-   */
-  private handlePlayerAttack(): void {
-    this.playerManager.handleAttack(this.enemyManager.getEnemies(), (enemy) => {
-      this.enemyManager.damageEnemy(enemy, this.playerManager, this.state);
-    });
   }
 
   /**
@@ -111,6 +101,9 @@ class Game {
 
     // 敵の更新
     this.enemyManager.update(deltaTime, this.playerManager, this.state);
+
+    // プレイヤーの更新（自動攻撃を含む）
+    this.playerManager.update(this.enemyManager, this.state);
 
     // カメラを更新
     this.sceneManager.updateCamera(this.playerManager.getPosition());
