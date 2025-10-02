@@ -1,13 +1,28 @@
 import * as THREE from "three";
+import { createCookingStationArea } from "../areas/CookingStationArea.js";
+import { createShopArea } from "../areas/ShopArea.js";
+import { createForgeArea } from "../areas/ForgeArea.js";
+import { createCompanionArea } from "../areas/CompanionArea.js";
 
 /**
  * シーン、カメラ、レンダラー、ライティングを管理するクラス
  * 3D空間の基本的な設定を担当します
  */
+/**
+ * 衝突判定用の境界ボックス
+ */
+export interface CollisionBox {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
 export class SceneManager {
   public scene: THREE.Scene;
   public camera: THREE.PerspectiveCamera;
   public renderer: THREE.WebGLRenderer;
+  public collisionBoxes: CollisionBox[] = [];
 
   constructor() {
     // シーンの作成と背景色の設定
@@ -126,15 +141,31 @@ export class SceneManager {
 
     // 1. 左 - 加工エリア（茶色）
     this.createArea(-15, distanceFromCenter, areaSize, 0x8b4513, "加工エリア");
+    const cookingCollisions = createCookingStationArea(
+      this.scene,
+      -15,
+      distanceFromCenter
+    );
+    this.collisionBoxes.push(...cookingCollisions);
 
     // 2. 真下中央 - 換金エリア（金色）
     this.createArea(0, distanceFromCenter, areaSize, 0xffd700, "換金エリア");
+    const shopCollisions = createShopArea(this.scene, 0, distanceFromCenter);
+    this.collisionBoxes.push(...shopCollisions);
 
     // 3. 右 - 武器アップグレードエリア（赤色）
     this.createArea(13, distanceFromCenter, areaSize, 0xff4444, "武器UP");
+    const forgeCollisions = createForgeArea(this.scene, 13, distanceFromCenter);
+    this.collisionBoxes.push(...forgeCollisions);
 
     // 4. 右側 - 仲間エリア（緑色）
     this.createArea(21, distanceFromCenter, areaSize, 0x44ff44, "仲間エリア");
+    const companionCollisions = createCompanionArea(
+      this.scene,
+      21,
+      distanceFromCenter
+    );
+    this.collisionBoxes.push(...companionCollisions);
   }
 
   /**

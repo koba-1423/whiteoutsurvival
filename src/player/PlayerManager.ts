@@ -8,6 +8,7 @@ import { createPlayerModel } from "../models/PlayerModel.js";
 import { createSwordModel } from "../models/WeaponModel.js";
 import { EffectManager } from "../ui/EffectManager.js";
 import type { EnemyManager } from "../enemy/EnemyManager.js";
+import type { CollisionBox } from "../rendering/SceneManager.js";
 
 /**
  * プレイヤー管理クラス
@@ -62,14 +63,41 @@ export class PlayerManager {
   /**
    * プレイヤーの移動を更新
    */
-  public updateMovement(moveVector: THREE.Vector3, deltaTime: number): void {
+  public updateMovement(
+    moveVector: THREE.Vector3,
+    deltaTime: number,
+    collisionBoxes: CollisionBox[] = []
+  ): void {
     const moveSpeed = 5.0;
 
     // 正規化して移動
     if (moveVector.length() > 0) {
       moveVector.normalize();
       moveVector.multiplyScalar(moveSpeed * deltaTime);
-      this.mesh.position.add(moveVector);
+
+      // 新しい位置を計算
+      const newPosition = this.mesh.position.clone().add(moveVector);
+
+      // 衝突チェック
+      const playerRadius = 0.5; // プレイヤーの半径
+      let canMove = true;
+
+      for (const box of collisionBoxes) {
+        if (
+          newPosition.x + playerRadius > box.minX &&
+          newPosition.x - playerRadius < box.maxX &&
+          newPosition.z + playerRadius > box.minZ &&
+          newPosition.z - playerRadius < box.maxZ
+        ) {
+          canMove = false;
+          break;
+        }
+      }
+
+      // 衝突しない場合のみ移動
+      if (canMove) {
+        this.mesh.position.add(moveVector);
+      }
     }
   }
 

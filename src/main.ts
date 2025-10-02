@@ -97,7 +97,11 @@ class Game {
 
     // プレイヤーの移動
     const moveVector = this.inputManager.getMovementInput();
-    this.playerManager.updateMovement(moveVector, deltaTime);
+    this.playerManager.updateMovement(
+      moveVector,
+      deltaTime,
+      this.sceneManager.collisionBoxes
+    );
 
     // 敵の更新
     this.enemyManager.update(
