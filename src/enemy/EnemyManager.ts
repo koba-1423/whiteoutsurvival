@@ -5,6 +5,7 @@ import { EffectManager } from "../ui/EffectManager.js";
 import { GameState } from "../state/frost_survival_design.js";
 import { EnemyAnimator } from "./EnemyAnimator.js";
 import { EnemyHealthBar } from "./EnemyHealthBar.js";
+import { EnemyAI } from "./EnemyAI.js";
 
 /**
  * 敵のデータ型定義
@@ -14,6 +15,7 @@ interface EnemyData {
   hp: number;
   maxHp: number;
   healthBar: THREE.Group;
+  wanderTarget: THREE.Vector3; // ランダムに歩く時の目標地点
 }
 
 /**
@@ -36,6 +38,7 @@ export class EnemyManager {
   private enemyMaxHp: number = 100; // 敵の最大HP
   private animator: EnemyAnimator;
   private healthBarManager: EnemyHealthBar;
+  private ai: EnemyAI;
 
   constructor(
     scene: THREE.Scene,
@@ -47,6 +50,13 @@ export class EnemyManager {
     this.effectManager = effectManager;
     this.animator = new EnemyAnimator();
     this.healthBarManager = new EnemyHealthBar();
+    this.ai = new EnemyAI(
+      this.animator,
+      this.enemySpeed,
+      this.safeZoneRadius,
+      this.spawnAreaWidth,
+      this.spawnAreaDepth
+    );
   }
 
   /**
@@ -90,6 +100,7 @@ export class EnemyManager {
         hp: this.enemyMaxHp,
         maxHp: this.enemyMaxHp,
         healthBar: healthBar,
+        wanderTarget: this.ai.generateWanderTarget(),
       };
 
       this.enemies.push(enemyData);
@@ -162,21 +173,10 @@ export class EnemyManager {
     this.healthBarManager.updateBillboard(enemyData.healthBar, camera.position);
 
     if (isPlayerInSpawnArea && !isPlayerInSafeZone && distance < 100) {
-      // プレイヤーがスポーンエリア内かつセーフゾーン外にいる場合のみ向かっていく
-      const direction = new THREE.Vector3()
-        .subVectors(playerPosition, enemy.position)
-        .normalize();
-
-      enemy.position.add(direction.multiplyScalar(this.enemySpeed * deltaTime));
-
-      // 敵がセーフゾーン内に入らないように制限
-      this.enforceSafeZoneBoundary(enemy);
-
-      // プレイヤーの方を向く
-      enemy.lookAt(playerPosition);
-
-      // 歩くアニメーション
-      this.animator.animateWalking(enemy, currentTime);
+      // プレイヤーがスポーンエリア内かつセーフゾーン外にいる場合は追跡
+      this.ai.chasePlayer(enemy, playerPosition, deltaTime, currentTime, (e) =>
+        this.enforceSafeZoneBoundary(e)
+      );
 
       // 攻撃範囲内で攻撃
       if (distance <= this.enemyAttackRange) {
@@ -185,6 +185,15 @@ export class EnemyManager {
           this.lastEnemyAttack = currentTime;
         }
       }
+    } else {
+      // 追跡モードでない場合はランダムに歩く
+      enemyData.wanderTarget = this.ai.wanderRandomly(
+        enemy,
+        enemyData.wanderTarget,
+        deltaTime,
+        currentTime,
+        (e) => this.enforceSafeZoneBoundary(e)
+      );
     }
   }
 
