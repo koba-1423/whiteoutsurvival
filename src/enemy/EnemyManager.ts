@@ -18,6 +18,8 @@ export class EnemyManager {
   private enemyAttackCooldown: number = 2.0;
   private lastEnemyAttack: number = 0;
   private safeZoneRadius: number = 4.0; // セーフゾーンの半径
+  private spawnAreaWidth: number = 100; // スポーンエリアの幅（X方向）
+  private spawnAreaDepth: number = 50; // スポーンエリアの奥行き（Z方向）
 
   constructor(
     scene: THREE.Scene,
@@ -31,8 +33,8 @@ export class EnemyManager {
 
   /**
    * 敵を生成
-   * プレイヤーの上半分（画面上側）に30体のシロクマを配置します
-   * セーフゾーン（半径4）の外側にのみスポーンします
+   * スポーンエリア内に30体のシロクマを配置します
+   * セーフゾーンの外側にのみスポーンします
    */
   public spawnEnemies(): void {
     for (let i = 0; i < 30; i++) {
@@ -44,8 +46,8 @@ export class EnemyManager {
       let distanceFromOrigin = 0;
 
       do {
-        x = (Math.random() - 0.5) * 100;
-        z = -Math.random() * 50; // 0から-50の範囲（上半分）
+        x = (Math.random() - 0.5) * this.spawnAreaWidth;
+        z = -Math.random() * this.spawnAreaDepth;
         distanceFromOrigin = Math.sqrt(x * x + z * z);
       } while (distanceFromOrigin < this.safeZoneRadius);
 
@@ -65,6 +67,7 @@ export class EnemyManager {
   /**
    * 敵を更新
    * プレイヤーに向かって移動し、攻撃範囲内で攻撃します
+   * 追跡範囲はスポーンエリアの範囲と同じです
    * ただし、プレイヤーがセーフゾーン内にいる場合は近づきません
    */
   public update(
@@ -83,11 +86,17 @@ export class EnemyManager {
     // プレイヤーがセーフゾーン内にいるかどうか
     const isPlayerInSafeZone = playerDistanceFromOrigin < this.safeZoneRadius;
 
+    // 追跡を開始する距離（スポーンエリアの範囲から計算）
+    const chaseDistance = Math.max(
+      this.spawnAreaWidth / 2,
+      this.spawnAreaDepth
+    );
+
     this.enemies.forEach((enemy) => {
       const distance = enemy.position.distanceTo(playerPosition);
 
-      if (distance < 20 && !isPlayerInSafeZone) {
-        // プレイヤーがセーフゾーン外にいる場合のみ向かっていく
+      if (distance < chaseDistance && !isPlayerInSafeZone) {
+        // プレイヤーがセーフゾーン外にいて、追跡範囲内の場合のみ向かっていく
         const direction = new THREE.Vector3()
           .subVectors(playerPosition, enemy.position)
           .normalize();
