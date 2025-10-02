@@ -92,6 +92,9 @@ export class SceneManager {
 
     // セーフゾーンの周りに木の柵を配置
     this.createSafeZoneFence();
+
+    // 拠点エリアを作成
+    this.createBaseAreas();
   }
 
   /**
@@ -111,6 +114,50 @@ export class SceneManager {
     circle.rotation.x = -Math.PI / 2;
     circle.position.set(0, 0.15, 0);
     this.scene.add(circle);
+  }
+
+  /**
+   * 拠点エリアを作成
+   * 主人公の下側に4つのエリアを配置します
+   */
+  private createBaseAreas(): void {
+    const areaSize = 4; // 黄色い円と同じくらいのサイズ
+    const distanceFromCenter = 15; // 主人公からの距離
+
+    // 1. 左 - 加工エリア（茶色）
+    this.createArea(-15, distanceFromCenter, areaSize, 0x8b4513, "加工エリア");
+
+    // 2. 真下中央 - 換金エリア（金色）
+    this.createArea(0, distanceFromCenter, areaSize, 0xffd700, "換金エリア");
+
+    // 3. 右 - 武器アップグレードエリア（赤色）
+    this.createArea(13, distanceFromCenter, areaSize, 0xff4444, "武器UP");
+
+    // 4. 右側 - 仲間エリア（緑色）
+    this.createArea(21, distanceFromCenter, areaSize, 0x44ff44, "仲間エリア");
+  }
+
+  /**
+   * 長方形エリアを作成
+   */
+  private createArea(
+    x: number,
+    z: number,
+    size: number,
+    color: number,
+    _label: string
+  ): void {
+    const areaGeometry = new THREE.PlaneGeometry(size * 2, size * 2);
+    const areaMaterial = new THREE.MeshBasicMaterial({
+      color: color,
+      transparent: true,
+      opacity: 0.5,
+      side: THREE.DoubleSide,
+    });
+    const area = new THREE.Mesh(areaGeometry, areaMaterial);
+    area.rotation.x = -Math.PI / 2;
+    area.position.set(x, 0.1, z);
+    this.scene.add(area);
   }
 
   /**
