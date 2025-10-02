@@ -106,6 +106,22 @@ export class EnemyManager {
           direction.multiplyScalar(this.enemySpeed * deltaTime)
         );
 
+        // 敵がセーフゾーン内に入らないように制限
+        const enemyDistanceFromOrigin = Math.sqrt(
+          enemy.position.x * enemy.position.x +
+            enemy.position.z * enemy.position.z
+        );
+
+        // 敵の見た目が黄色い円と被らないように、余裕を持たせる
+        const enemySafeDistance = this.safeZoneRadius + 2;
+
+        if (enemyDistanceFromOrigin < enemySafeDistance) {
+          // セーフゾーンの境界線上に押し戻す
+          const angle = Math.atan2(enemy.position.z, enemy.position.x);
+          enemy.position.x = Math.cos(angle) * enemySafeDistance;
+          enemy.position.z = Math.sin(angle) * enemySafeDistance;
+        }
+
         // プレイヤーの方を向く
         enemy.lookAt(playerPosition);
 

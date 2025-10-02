@@ -89,6 +89,9 @@ export class SceneManager {
 
     // 主人公の初期位置の周りに円を描画
     this.createSpawnCircle();
+
+    // セーフゾーンの周りに木の柵を配置
+    this.createSafeZoneFence();
   }
 
   /**
@@ -108,6 +111,39 @@ export class SceneManager {
     circle.rotation.x = -Math.PI / 2;
     circle.position.set(0, 0.15, 0);
     this.scene.add(circle);
+  }
+
+  /**
+   * セーフゾーンの周りに木の壁を配置
+   * 黄色い円の上半円（画面奥側）にのみ壁を配置します
+   */
+  private createSafeZoneFence(): void {
+    const wallRadius = 4; // 黄色い円の半径
+    const wallCount = 32; // 壁の板の数（隙間を少なくするため増やす）
+    const woodColor = 0x8b6f47; // 木の色
+
+    for (let i = 0; i < wallCount; i++) {
+      // 上半円に少し下側にもかぶるように配置（0.875π から 2.125π の範囲）
+      const startAngle = Math.PI * 0.875;
+      const angleRange = Math.PI * 1.25;
+      const angle = startAngle + (i / wallCount) * angleRange;
+      const x = Math.cos(angle) * wallRadius;
+      const z = Math.sin(angle) * wallRadius;
+
+      // 木の板を作成（縦長の板、円周に沿って配置）
+      const plankGeometry = new THREE.BoxGeometry(0.1, 1.5, 0.5);
+      const plankMaterial = new THREE.MeshStandardMaterial({
+        color: woodColor,
+        roughness: 0.8,
+      });
+      const plank = new THREE.Mesh(plankGeometry, plankMaterial);
+      plank.position.set(x, 0.75, z);
+      // 円周に沿うように90度ずらして回転
+      plank.rotation.y = angle + Math.PI / 2;
+      plank.castShadow = true;
+      plank.receiveShadow = true;
+      this.scene.add(plank);
+    }
   }
 
   /**
