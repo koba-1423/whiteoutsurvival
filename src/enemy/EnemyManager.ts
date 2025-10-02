@@ -3,6 +3,8 @@ import { createPolarBearModel } from "../models/EnemyModel.js";
 import { PlayerManager } from "../player/PlayerManager.js";
 import { EffectManager } from "../ui/EffectManager.js";
 import { GameState } from "../state/frost_survival_design.js";
+import { EnemyAnimator } from "./EnemyAnimator.js";
+import { EnemyHealthBar } from "./EnemyHealthBar.js";
 
 /**
  * 敵のデータ型定義
@@ -32,6 +34,8 @@ export class EnemyManager {
   private spawnAreaWidth: number = 100; // スポーンエリアの幅（X方向）
   private spawnAreaDepth: number = 50; // スポーンエリアの奥行き（Z方向）
   private enemyMaxHp: number = 100; // 敵の最大HP
+  private animator: EnemyAnimator;
+  private healthBarManager: EnemyHealthBar;
 
   constructor(
     scene: THREE.Scene,
@@ -41,6 +45,8 @@ export class EnemyManager {
     this.scene = scene;
     this.clock = clock;
     this.effectManager = effectManager;
+    this.animator = new EnemyAnimator();
+    this.healthBarManager = new EnemyHealthBar();
   }
 
   /**
@@ -72,7 +78,7 @@ export class EnemyManager {
       enemyMesh.lookAt(0, 0, 0);
 
       // HPゲージを作成
-      const healthBar = this.createHealthBar();
+      const healthBar = this.healthBarManager.createHealthBar();
       healthBar.position.set(0, 1.5, 0); // 敵の上に配置
       enemyMesh.add(healthBar);
 
@@ -88,30 +94,6 @@ export class EnemyManager {
 
       this.enemies.push(enemyData);
     }
-  }
-
-  /**
-   * HPゲージを作成
-   * 敵の上部に細く短いゲージを表示します
-   */
-  private createHealthBar(): THREE.Group {
-    const healthBarGroup = new THREE.Group();
-
-    // 背景（赤いバー）
-    const bgGeometry = new THREE.PlaneGeometry(1, 0.1);
-    const bgMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const background = new THREE.Mesh(bgGeometry, bgMaterial);
-    healthBarGroup.add(background);
-
-    // 前景（緑のバー、HP残量を示す）
-    const fgGeometry = new THREE.PlaneGeometry(1, 0.1);
-    const fgMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    const foreground = new THREE.Mesh(fgGeometry, fgMaterial);
-    foreground.position.z = 0.01; // 少し前に配置
-    foreground.name = "healthBarForeground"; // 後で更新できるように名前を付ける
-    healthBarGroup.add(foreground);
-
-    return healthBarGroup;
   }
 
   /**
@@ -145,90 +127,83 @@ export class EnemyManager {
       playerPosition.z >= -this.spawnAreaDepth;
 
     this.enemies.forEach((enemyData) => {
-      const enemy = enemyData.mesh;
-      const distance = enemy.position.distanceTo(playerPosition);
-
-      // HPゲージを常にカメラの方に向ける（ビルボード効果）
-      enemyData.healthBar.lookAt(camera.position);
-
-      if (isPlayerInSpawnArea && !isPlayerInSafeZone && distance < 100) {
-        // プレイヤーがスポーンエリア内かつセーフゾーン外にいる場合のみ向かっていく
-        const direction = new THREE.Vector3()
-          .subVectors(playerPosition, enemy.position)
-          .normalize();
-
-        enemy.position.add(
-          direction.multiplyScalar(this.enemySpeed * deltaTime)
-        );
-
-        // 敵がセーフゾーン内に入らないように制限
-        const enemyDistanceFromOrigin = Math.sqrt(
-          enemy.position.x * enemy.position.x +
-            enemy.position.z * enemy.position.z
-        );
-
-        // 敵の見た目が黄色い円と被らないように、余裕を持たせる
-        const enemySafeDistance = this.safeZoneRadius + 2;
-
-        if (enemyDistanceFromOrigin < enemySafeDistance) {
-          // セーフゾーンの境界線上に押し戻す
-          const angle = Math.atan2(enemy.position.z, enemy.position.x);
-          enemy.position.x = Math.cos(angle) * enemySafeDistance;
-          enemy.position.z = Math.sin(angle) * enemySafeDistance;
-        }
-
-        // プレイヤーの方を向く
-        enemy.lookAt(playerPosition);
-
-        // 歩くアニメーション
-        this.animateWalking(enemy, currentTime);
-
-        // 攻撃範囲内で攻撃
-        if (distance <= this.enemyAttackRange) {
-          if (currentTime - this.lastEnemyAttack >= this.enemyAttackCooldown) {
-            this.handleEnemyAttack(enemy, playerManager, state);
-            this.lastEnemyAttack = currentTime;
-          }
-        }
-      }
+      this.updateSingleEnemy(
+        enemyData,
+        deltaTime,
+        playerPosition,
+        isPlayerInSafeZone,
+        isPlayerInSpawnArea,
+        currentTime,
+        playerManager,
+        state,
+        camera
+      );
     });
   }
 
   /**
-   * 歩くアニメーション
-   * 脚を前後に動かして、体を上下に揺らします
+   * 個別の敵を更新
    */
-  private animateWalking(enemy: THREE.Object3D, currentTime: number): void {
-    // 歩行サイクルの速度
-    const walkSpeed = 4.0;
-    const walkCycle = Math.sin(currentTime * walkSpeed);
+  private updateSingleEnemy(
+    enemyData: EnemyData,
+    deltaTime: number,
+    playerPosition: THREE.Vector3,
+    isPlayerInSafeZone: boolean,
+    isPlayerInSpawnArea: boolean,
+    currentTime: number,
+    playerManager: PlayerManager,
+    state: GameState,
+    camera: THREE.Camera
+  ): void {
+    const enemy = enemyData.mesh;
+    const distance = enemy.position.distanceTo(playerPosition);
 
-    // 脚を取得
-    const legFrontLeft = enemy.getObjectByName("legFrontLeft");
-    const legFrontRight = enemy.getObjectByName("legFrontRight");
-    const legBackLeft = enemy.getObjectByName("legBackLeft");
-    const legBackRight = enemy.getObjectByName("legBackRight");
+    // HPゲージを常にカメラの方に向ける（ビルボード効果）
+    this.healthBarManager.updateBillboard(enemyData.healthBar, camera.position);
 
-    // 体を取得
-    const body = enemy.getObjectByName("body");
+    if (isPlayerInSpawnArea && !isPlayerInSafeZone && distance < 100) {
+      // プレイヤーがスポーンエリア内かつセーフゾーン外にいる場合のみ向かっていく
+      const direction = new THREE.Vector3()
+        .subVectors(playerPosition, enemy.position)
+        .normalize();
 
-    // 脚を前後に動かす（前左と後右が同期、前右と後左が同期）
-    if (legFrontLeft) {
-      legFrontLeft.rotation.x = walkCycle * 0.3;
-    }
-    if (legBackRight) {
-      legBackRight.rotation.x = walkCycle * 0.3;
-    }
-    if (legFrontRight) {
-      legFrontRight.rotation.x = -walkCycle * 0.3;
-    }
-    if (legBackLeft) {
-      legBackLeft.rotation.x = -walkCycle * 0.3;
-    }
+      enemy.position.add(direction.multiplyScalar(this.enemySpeed * deltaTime));
 
-    // 体を上下に揺らす
-    if (body) {
-      body.position.y = 0.3 + Math.abs(walkCycle) * 0.05;
+      // 敵がセーフゾーン内に入らないように制限
+      this.enforceSafeZoneBoundary(enemy);
+
+      // プレイヤーの方を向く
+      enemy.lookAt(playerPosition);
+
+      // 歩くアニメーション
+      this.animator.animateWalking(enemy, currentTime);
+
+      // 攻撃範囲内で攻撃
+      if (distance <= this.enemyAttackRange) {
+        if (currentTime - this.lastEnemyAttack >= this.enemyAttackCooldown) {
+          this.handleEnemyAttack(enemy, playerManager, state);
+          this.lastEnemyAttack = currentTime;
+        }
+      }
+    }
+  }
+
+  /**
+   * 敵がセーフゾーン内に入らないように制限
+   */
+  private enforceSafeZoneBoundary(enemy: THREE.Object3D): void {
+    const enemyDistanceFromOrigin = Math.sqrt(
+      enemy.position.x * enemy.position.x + enemy.position.z * enemy.position.z
+    );
+
+    // 敵の見た目が黄色い円と被らないように、余裕を持たせる
+    const enemySafeDistance = this.safeZoneRadius + 2;
+
+    if (enemyDistanceFromOrigin < enemySafeDistance) {
+      // セーフゾーンの境界線上に押し戻す
+      const angle = Math.atan2(enemy.position.z, enemy.position.x);
+      enemy.position.x = Math.cos(angle) * enemySafeDistance;
+      enemy.position.z = Math.sin(angle) * enemySafeDistance;
     }
   }
 
@@ -265,7 +240,11 @@ export class EnemyManager {
     enemyData.hp -= damage;
 
     // HPゲージを更新
-    this.updateHealthBar(enemyData);
+    this.healthBarManager.updateHealthBar(
+      enemyData.healthBar,
+      enemyData.hp,
+      enemyData.maxHp
+    );
 
     // ダメージテキスト表示
     this.effectManager.showDamageText(enemy.position, damage);
@@ -280,20 +259,6 @@ export class EnemyManager {
 
       // リソース獲得
       playerManager.gainResources(state);
-    }
-  }
-
-  /**
-   * HPゲージを更新
-   */
-  private updateHealthBar(enemyData: EnemyData): void {
-    const healthBar = enemyData.healthBar;
-    const foreground = healthBar.getObjectByName("healthBarForeground");
-
-    if (foreground) {
-      const hpRatio = Math.max(0, enemyData.hp / enemyData.maxHp);
-      foreground.scale.x = hpRatio;
-      foreground.position.x = -(1 - hpRatio);
     }
   }
 
