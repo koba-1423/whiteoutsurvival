@@ -17,6 +17,7 @@ export class EnemyManager {
   private enemyAttackRange: number = 1.5;
   private enemyAttackCooldown: number = 2.0;
   private lastEnemyAttack: number = 0;
+  private safeZoneRadius: number = 4.0; // セーフゾーンの半径
 
   constructor(
     scene: THREE.Scene,
@@ -31,14 +32,23 @@ export class EnemyManager {
   /**
    * 敵を生成
    * プレイヤーの上半分（画面上側）に30体のシロクマを配置します
+   * セーフゾーン（半径4）の外側にのみスポーンします
    */
   public spawnEnemies(): void {
     for (let i = 0; i < 30; i++) {
       const enemy = createPolarBearModel();
 
-      // 主人公の上半分（画面上側）にランダムに配置
-      const x = (Math.random() - 0.5) * 100;
-      const z = -Math.random() * 50; // 0から-50の範囲（上半分）
+      // セーフゾーンの外側にスポーンする位置を探す
+      let x = 0;
+      let z = 0;
+      let distanceFromOrigin = 0;
+
+      do {
+        x = (Math.random() - 0.5) * 100;
+        z = -Math.random() * 50; // 0から-50の範囲（上半分）
+        distanceFromOrigin = Math.sqrt(x * x + z * z);
+      } while (distanceFromOrigin < this.safeZoneRadius);
+
       enemy.position.set(x, 0, z);
 
       // 大きさを3倍にする
@@ -55,6 +65,7 @@ export class EnemyManager {
   /**
    * 敵を更新
    * プレイヤーに向かって移動し、攻撃範囲内で攻撃します
+   * ただし、プレイヤーがセーフゾーン内にいる場合は近づきません
    */
   public update(
     deltaTime: number,
@@ -64,11 +75,19 @@ export class EnemyManager {
     const currentTime = this.clock.getElapsedTime();
     const playerPosition = playerManager.getPosition();
 
+    // プレイヤーが原点（セーフゾーン中心）からどれだけ離れているか
+    const playerDistanceFromOrigin = Math.sqrt(
+      playerPosition.x * playerPosition.x + playerPosition.z * playerPosition.z
+    );
+
+    // プレイヤーがセーフゾーン内にいるかどうか
+    const isPlayerInSafeZone = playerDistanceFromOrigin < this.safeZoneRadius;
+
     this.enemies.forEach((enemy) => {
       const distance = enemy.position.distanceTo(playerPosition);
 
-      if (distance < 20) {
-        // プレイヤーに向かって移動
+      if (distance < 20 && !isPlayerInSafeZone) {
+        // プレイヤーがセーフゾーン外にいる場合のみ向かっていく
         const direction = new THREE.Vector3()
           .subVectors(playerPosition, enemy.position)
           .normalize();

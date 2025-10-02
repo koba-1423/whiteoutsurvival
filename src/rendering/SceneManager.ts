@@ -86,6 +86,28 @@ export class SceneManager {
     ground.rotation.x = -Math.PI / 2; // 地面を水平にする
     ground.receiveShadow = true; // 影を受ける
     this.scene.add(ground);
+
+    // 主人公の初期位置の周りに円を描画
+    this.createSpawnCircle();
+  }
+
+  /**
+   * 主人公の初期スポーン位置に円を描画
+   * 半径4の黄色い円を表示します
+   */
+  private createSpawnCircle(): void {
+    // 塗りつぶしの円を作成
+    const circleGeometry = new THREE.CircleGeometry(4, 64);
+    const circleMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffff00, // 黄色
+      transparent: true,
+      opacity: 0.5,
+      side: THREE.DoubleSide,
+    });
+    const circle = new THREE.Mesh(circleGeometry, circleMaterial);
+    circle.rotation.x = -Math.PI / 2;
+    circle.position.set(0, 0.15, 0);
+    this.scene.add(circle);
   }
 
   /**
