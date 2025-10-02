@@ -100,7 +100,12 @@ class Game {
     this.playerManager.updateMovement(moveVector, deltaTime);
 
     // 敵の更新
-    this.enemyManager.update(deltaTime, this.playerManager, this.state);
+    this.enemyManager.update(
+      deltaTime,
+      this.playerManager,
+      this.state,
+      this.sceneManager.camera
+    );
 
     // プレイヤーの更新（自動攻撃を含む）
     this.playerManager.update(this.enemyManager, this.state);

@@ -5,11 +5,22 @@ import { EffectManager } from "../ui/EffectManager.js";
 import { GameState } from "../state/frost_survival_design.js";
 
 /**
- * 敵管理クラス
- * 敵の生成、AI、攻撃、アニメーションを管理します
+ * 敵のデータ型定義
  */
+interface EnemyData {
+  mesh: THREE.Object3D;
+  hp: number;
+  maxHp: number;
+  healthBar: THREE.Group;
+}
+
+/**
+ * 敵管理クラス
+ * 敵の生成、AI、攻撃、アニメーション、HP管理を管理します
+ */
+
 export class EnemyManager {
-  private enemies: THREE.Object3D[] = [];
+  private enemies: EnemyData[] = [];
   private scene: THREE.Scene;
   private clock: THREE.Clock;
   private effectManager: EffectManager;
@@ -20,6 +31,7 @@ export class EnemyManager {
   private safeZoneRadius: number = 4.0; // セーフゾーンの半径
   private spawnAreaWidth: number = 100; // スポーンエリアの幅（X方向）
   private spawnAreaDepth: number = 50; // スポーンエリアの奥行き（Z方向）
+  private enemyMaxHp: number = 100; // 敵の最大HP
 
   constructor(
     scene: THREE.Scene,
@@ -38,7 +50,7 @@ export class EnemyManager {
    */
   public spawnEnemies(): void {
     for (let i = 0; i < 30; i++) {
-      const enemy = createPolarBearModel();
+      const enemyMesh = createPolarBearModel();
 
       // セーフゾーンの外側にスポーンする位置を探す
       let x = 0;
@@ -51,17 +63,55 @@ export class EnemyManager {
         distanceFromOrigin = Math.sqrt(x * x + z * z);
       } while (distanceFromOrigin < this.safeZoneRadius);
 
-      enemy.position.set(x, 0, z);
+      enemyMesh.position.set(x, 0, z);
 
       // 大きさを3倍にする
-      enemy.scale.set(3, 3, 3);
+      enemyMesh.scale.set(3, 3, 3);
 
       // 主人公の方向を向ける（主人公は原点にいる）
-      enemy.lookAt(0, 0, 0);
+      enemyMesh.lookAt(0, 0, 0);
 
-      this.scene.add(enemy);
-      this.enemies.push(enemy);
+      // HPゲージを作成
+      const healthBar = this.createHealthBar();
+      healthBar.position.set(0, 1.5, 0); // 敵の上に配置
+      enemyMesh.add(healthBar);
+
+      this.scene.add(enemyMesh);
+
+      // 敵データを作成
+      const enemyData: EnemyData = {
+        mesh: enemyMesh,
+        hp: this.enemyMaxHp,
+        maxHp: this.enemyMaxHp,
+        healthBar: healthBar,
+      };
+
+      this.enemies.push(enemyData);
     }
+  }
+
+  /**
+   * HPゲージを作成
+   * 敵の上部に細く短いゲージを表示します
+   */
+  private createHealthBar(): THREE.Group {
+    const healthBarGroup = new THREE.Group();
+
+    // 背景（赤いバー）
+    const bgGeometry = new THREE.PlaneGeometry(1, 0.1);
+    const bgMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const background = new THREE.Mesh(bgGeometry, bgMaterial);
+    healthBarGroup.add(background);
+
+    // 前景（緑のバー、HP残量を示す）
+    const fgGeometry = new THREE.PlaneGeometry(1, 0.1);
+    const fgMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const foreground = new THREE.Mesh(fgGeometry, fgMaterial);
+    foreground.position.z = 0.01; // 少し前に配置
+    foreground.name = "healthBarForeground"; // 後で更新できるように名前を付ける
+    healthBarGroup.add(foreground);
+
+    return healthBarGroup;
   }
 
   /**
@@ -73,7 +123,8 @@ export class EnemyManager {
   public update(
     deltaTime: number,
     playerManager: PlayerManager,
-    state: GameState
+    state: GameState,
+    camera: THREE.Camera
   ): void {
     const currentTime = this.clock.getElapsedTime();
     const playerPosition = playerManager.getPosition();
@@ -93,8 +144,12 @@ export class EnemyManager {
       playerPosition.z <= 0 &&
       playerPosition.z >= -this.spawnAreaDepth;
 
-    this.enemies.forEach((enemy) => {
+    this.enemies.forEach((enemyData) => {
+      const enemy = enemyData.mesh;
       const distance = enemy.position.distanceTo(playerPosition);
+
+      // HPゲージを常にカメラの方に向ける（ビルボード効果）
+      enemyData.healthBar.lookAt(camera.position);
 
       if (isPlayerInSpawnArea && !isPlayerInSafeZone && distance < 100) {
         // プレイヤーがスポーンエリア内かつセーフゾーン外にいる場合のみ向かっていく
@@ -200,24 +255,52 @@ export class EnemyManager {
     // ダメージ計算
     const damage = playerManager.calculateDamage(state.weaponLevel);
 
+    // 対応する敵データを検索
+    const enemyData = this.enemies.find((data) => data.mesh === enemy);
+    if (!enemyData) {
+      return;
+    }
+
+    // HPを減らす
+    enemyData.hp -= damage;
+
+    // HPゲージを更新
+    this.updateHealthBar(enemyData);
+
     // ダメージテキスト表示
     this.effectManager.showDamageText(enemy.position, damage);
 
-    // 敵を削除（倒した）
-    this.scene.remove(enemy);
-    const enemyIndex = this.enemies.indexOf(enemy);
-    if (enemyIndex > -1) {
-      this.enemies.splice(enemyIndex, 1);
-    }
+    // HPが0以下になったら敵を削除
+    if (enemyData.hp <= 0) {
+      this.scene.remove(enemy);
+      const enemyIndex = this.enemies.indexOf(enemyData);
+      if (enemyIndex > -1) {
+        this.enemies.splice(enemyIndex, 1);
+      }
 
-    // リソース獲得
-    playerManager.gainResources(state);
+      // リソース獲得
+      playerManager.gainResources(state);
+    }
+  }
+
+  /**
+   * HPゲージを更新
+   */
+  private updateHealthBar(enemyData: EnemyData): void {
+    const healthBar = enemyData.healthBar;
+    const foreground = healthBar.getObjectByName("healthBarForeground");
+
+    if (foreground) {
+      const hpRatio = Math.max(0, enemyData.hp / enemyData.maxHp);
+      foreground.scale.x = hpRatio;
+      foreground.position.x = -(1 - hpRatio);
+    }
   }
 
   /**
    * 敵のリストを取得
    */
   public getEnemies(): THREE.Object3D[] {
-    return this.enemies;
+    return this.enemies.map((data) => data.mesh);
   }
 }
