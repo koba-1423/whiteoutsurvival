@@ -1,2 +1,3 @@
-# whiteoutsurvival
-後でレポ名変更
+# 小林サバイバル (Kobayashi Survival)
+
+北欧風サバイバルゲーム
