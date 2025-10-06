@@ -27,25 +27,25 @@ export class WeaponUpgradeManager {
       this.currentSword.scale.set(1, 1, 1);
       this.updateSwordColor(0x888888);
     }
-    
+
     if (weaponLevel >= 2) {
       // レベル2: 少し大きく、色を青に
       this.currentSword.scale.set(1.1, 1.1, 1.1);
       this.updateSwordColor(0x4444ff);
     }
-    
+
     if (weaponLevel >= 3) {
       // レベル3: さらに大きく、色を緑に
       this.currentSword.scale.set(1.2, 1.2, 1.2);
       this.updateSwordColor(0x44ff44);
     }
-    
+
     if (weaponLevel >= 4) {
       // レベル4: さらに大きく、色を赤に
       this.currentSword.scale.set(1.3, 1.3, 1.3);
       this.updateSwordColor(0xff4444);
     }
-    
+
     if (weaponLevel >= 5) {
       // レベル5: 最大サイズ、色を金色に
       this.currentSword.scale.set(1.4, 1.4, 1.4);

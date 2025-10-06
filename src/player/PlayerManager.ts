@@ -75,7 +75,10 @@ export class PlayerManager {
    * 武器を更新
    */
   public updateSword(weaponLevel: number): void {
-    this.weaponUpgradeManager.updateSword(weaponLevel, this.mesh as THREE.Group);
+    this.weaponUpgradeManager.updateSword(
+      weaponLevel,
+      this.mesh as THREE.Group
+    );
   }
 
   /**
