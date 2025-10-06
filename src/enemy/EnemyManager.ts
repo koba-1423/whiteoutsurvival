@@ -16,6 +16,7 @@ interface EnemyData {
   maxHp: number;
   healthBar: THREE.Group;
   wanderTarget: THREE.Vector3; // ランダムに歩く時の目標地点
+  lastAttackTime: number; // この敵の最後の攻撃時刻
 }
 
 /**
@@ -30,8 +31,7 @@ export class EnemyManager {
   private effectManager: EffectManager;
   private enemySpeed: number = 2.0;
   private enemyAttackRange: number = 1.5;
-  private enemyAttackCooldown: number = 2.0;
-  private lastEnemyAttack: number = 0;
+  private enemyAttackCooldown: number = 1.5;
   private safeZoneRadius: number = 4.0; // セーフゾーンの半径
   private spawnAreaWidth: number = 100; // スポーンエリアの幅（X方向）
   private spawnAreaDepth: number = 50; // スポーンエリアの奥行き（Z方向）
@@ -101,6 +101,7 @@ export class EnemyManager {
         maxHp: this.enemyMaxHp,
         healthBar: healthBar,
         wanderTarget: this.ai.generateWanderTarget(),
+        lastAttackTime: 0,
       };
 
       this.enemies.push(enemyData);
@@ -180,9 +181,12 @@ export class EnemyManager {
 
       // 攻撃範囲内で攻撃
       if (distance <= this.enemyAttackRange) {
-        if (currentTime - this.lastEnemyAttack >= this.enemyAttackCooldown) {
+        if (
+          currentTime - enemyData.lastAttackTime >=
+          this.enemyAttackCooldown
+        ) {
           this.handleEnemyAttack(enemy, playerManager, state);
-          this.lastEnemyAttack = currentTime;
+          enemyData.lastAttackTime = currentTime;
         }
       }
     } else {
