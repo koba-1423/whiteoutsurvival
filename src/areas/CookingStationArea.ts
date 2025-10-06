@@ -83,10 +83,10 @@ export function createCookingStationArea(
 
   return [
     {
-      minX: x - 1.5,
-      maxX: x + 1.5,
-      minZ: z - 1,
-      maxZ: z + 1,
+      minX: x - 2.0,
+      maxX: x + 2.0,
+      minZ: z - 1.4,
+      maxZ: z + 1.4,
     },
   ];
 }

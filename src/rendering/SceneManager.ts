@@ -23,6 +23,9 @@ export class SceneManager {
   public camera: THREE.PerspectiveCamera;
   public renderer: THREE.WebGLRenderer;
   public collisionBoxes: CollisionBox[] = [];
+  // 加工エリアのAABBと右側の出力座標（積み上げ位置）
+  public cookingAreaBox?: CollisionBox;
+  public cookingOutputPosition?: THREE.Vector3;
 
   constructor() {
     // シーンの作成と背景色の設定
@@ -147,6 +150,12 @@ export class SceneManager {
       distanceFromCenter
     );
     this.collisionBoxes.push(...cookingCollisions);
+    this.cookingAreaBox = cookingCollisions[0];
+    this.cookingOutputPosition = new THREE.Vector3(
+      -15 + 3.0,
+      1.0,
+      distanceFromCenter
+    );
 
     // 2. 真下中央 - 換金エリア（金色）
     this.createArea(0, distanceFromCenter, areaSize, 0xffd700, "換金エリア");

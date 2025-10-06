@@ -163,6 +163,53 @@ export class PlayerManager {
   }
 
   /**
+   * 焼いた肉を頭上に追加
+   */
+  public addCookedMeatStack(count: number = 1): void {
+    for (let i = 0; i < count; i++) {
+      const meat = this.createCookedMeatVisual();
+      const index = this.meatStackCount;
+      const yOffset = index * 0.095;
+      const xJitter = (Math.random() - 0.5) * 0.06;
+      const zJitter = (Math.random() - 0.5) * 0.06;
+      meat.position.set(xJitter, yOffset, zJitter);
+      this.meatStackGroup.add(meat);
+      this.meatStackCount += 1;
+    }
+  }
+
+  /**
+   * 頭上の肉スタックから取り除く
+   * 戻り値: 実際に取り除けた枚数
+   */
+  public removeRawMeatStack(count: number = 1): number {
+    let removed = 0;
+    for (let i = 0; i < count; i++) {
+      let removedOne = false;
+      for (let idx = this.meatStackGroup.children.length - 1; idx >= 0; idx--) {
+        const child = this.meatStackGroup.children[idx] as THREE.Object3D;
+        const type =
+          (child.userData && (child.userData as any).meatType) || undefined;
+        if (type === "raw") {
+          this.meatStackGroup.remove(child);
+          this.meatStackCount = Math.max(0, this.meatStackCount - 1);
+          removed += 1;
+          removedOne = true;
+          break;
+        }
+      }
+      if (!removedOne) {
+        break;
+      }
+    }
+    // 高さを詰める
+    this.meatStackGroup.children.forEach((child, index) => {
+      child.position.y = index * 0.095;
+    });
+    return removed;
+  }
+
+  /**
    * 肉の見た目を作成（簡易的な直方体）
    */
   private createMeatVisual(): THREE.Object3D {
@@ -171,9 +218,9 @@ export class PlayerManager {
     // ステーキ本体（薄い円柱を楕円にスケール）
     const steakGeometry = new THREE.CylinderGeometry(0.22, 0.2, 0.08, 20);
     const steakMaterial = new THREE.MeshStandardMaterial({
-      color: 0xb22222, // 深い赤
-      metalness: 0.0,
-      roughness: 0.85,
+      color: 0xff3b3b, // 鮮やかな赤
+      metalness: 0.05,
+      roughness: 0.8,
     });
     const steakMesh = new THREE.Mesh(steakGeometry, steakMaterial);
     // 回転はさせず、広い面（円形の面）を地面と平行に保持
@@ -201,7 +248,43 @@ export class PlayerManager {
     group.rotation.y = Math.random() * Math.PI * 2; // 水平回転のみ強め
     group.rotation.x = (Math.random() - 0.5) * 0.02; // 傾きはごく小さく
     group.rotation.z = (Math.random() - 0.5) * 0.02;
+    // 種別タグ
+    group.userData.meatType = "raw";
 
+    return group;
+  }
+
+  /** 焼肉の見た目（少し濃い色で薄め） */
+  private createCookedMeatVisual(): THREE.Object3D {
+    const group = new THREE.Group();
+    const steakGeometry = new THREE.CylinderGeometry(0.22, 0.2, 0.06, 20);
+    const steakMaterial = new THREE.MeshStandardMaterial({
+      color: 0x7a1a1a,
+      metalness: 0.0,
+      roughness: 0.85,
+    });
+    const steakMesh = new THREE.Mesh(steakGeometry, steakMaterial);
+    steakMesh.scale.set(1.6, 1.0, 1.2);
+    steakMesh.castShadow = false;
+    steakMesh.receiveShadow = false;
+    group.add(steakMesh);
+
+    const fatGeometry = new THREE.BoxGeometry(0.06, 0.006, 0.36);
+    const fatMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf5e6c8,
+      metalness: 0.05,
+      roughness: 0.6,
+    });
+    const fatMesh = new THREE.Mesh(fatGeometry, fatMaterial);
+    fatMesh.position.set(0, 0.038, 0);
+    fatMesh.rotation.y = (Math.random() - 0.5) * 0.4;
+    fatMesh.castShadow = false;
+    group.add(fatMesh);
+
+    group.rotation.y = Math.random() * Math.PI * 2;
+    group.rotation.x = (Math.random() - 0.5) * 0.02;
+    group.rotation.z = (Math.random() - 0.5) * 0.02;
+    group.userData.meatType = "cooked";
     return group;
   }
 
