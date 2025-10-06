@@ -41,6 +41,7 @@ class Game {
   private lastProcessAt: number = 0;
   private lastCashInAt: number = 0;
   private lastWeaponUpgradeAt: number = 0;
+  private lastTowerUpgradeAt: number = 0;
   // コイン表示用のタグ
   private static readonly COIN_TAG = "__coin__";
   // 焼肉回収用のタグ
@@ -146,6 +147,9 @@ class Game {
 
     // 武器エリア内では50円で武器アップグレード
     this.updateWeaponUpgradeProcess();
+
+    // タワーエリア内では50円でタワーアップグレード
+    this.updateTowerUpgradeProcess();
 
     // タワーの自動攻撃
     this.towerAttackManager.update(this.enemyManager);
@@ -392,6 +396,40 @@ class Game {
     if (toRemove.length > 0) {
       toRemove.forEach((m) => this.sceneManager.scene.remove(m));
       this.playerManager.addCookedMeatStack(toRemove.length);
+    }
+  }
+
+  /**
+   * タワーアップグレード処理
+   */
+  private updateTowerUpgradeProcess(): void {
+    const box = this.sceneManager.towerAreaBox;
+    if (!box) return;
+
+    const p = this.playerManager.getPosition();
+    const margin = 0.6;
+    const inside =
+      p.x >= box.minX - margin &&
+      p.x <= box.maxX + margin &&
+      p.z >= box.minZ - margin &&
+      p.z <= box.maxZ + margin;
+    if (!inside) return;
+
+    const now = this.clock.getElapsedTime();
+    if (now - this.lastTowerUpgradeAt < 1.0) return;
+
+    // 50円（5コイン）でタワーアップグレード
+    const upgradeCost = 5; // 5コイン = 50円
+    if (this.state.money >= upgradeCost) {
+      // 頭上からコインを5枚取り除く
+      const removedCoins = this.playerManager.removeCoinStack(5);
+      if (removedCoins >= 5) {
+        this.state.money -= upgradeCost;
+        this.lastTowerUpgradeAt = now;
+
+        // タワーをアップグレード
+        this.towerAttackManager.upgradeTower();
+      }
     }
   }
 

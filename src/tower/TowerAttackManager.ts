@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { EnemyManager } from "../enemy/EnemyManager.js";
-import { calculateDamage } from "../state/frost_survival_design.js";
 
 /**
  * タワー攻撃管理クラス
@@ -8,10 +7,12 @@ import { calculateDamage } from "../state/frost_survival_design.js";
  */
 export class TowerAttackManager {
   private lastAttackTime: number = 0;
-  private attackCooldown: number = 2.0; // 攻撃間隔（秒）
+  private attackCooldown: number = 1.0; // 攻撃間隔（秒）
   private attackRange: number = 15.0; // 攻撃範囲
   private towerPosition: THREE.Vector3;
   private clock: THREE.Clock;
+  private isActive: boolean = false; // タワーがアクティブかどうか
+  private towerLevel: number = 0; // タワーのレベル
 
   constructor(towerPosition: THREE.Vector3, clock: THREE.Clock) {
     this.towerPosition = towerPosition;
@@ -23,6 +24,11 @@ export class TowerAttackManager {
    * 範囲内の敵を自動で攻撃します
    */
   public update(enemyManager: EnemyManager): void {
+    // タワーがアクティブでない場合は攻撃しない
+    if (!this.isActive) {
+      return;
+    }
+
     const currentTime = this.clock.getElapsedTime();
 
     // 攻撃クールダウンチェック
@@ -78,20 +84,51 @@ export class TowerAttackManager {
    * 敵を攻撃
    */
   private attackEnemy(enemy: THREE.Object3D, enemyManager: EnemyManager): void {
-    // タワーの攻撃力を計算（プレイヤーと同じ攻撃力）
-    const towerWeaponLevel = 1; // タワーの武器レベル（固定）
-    const damage = calculateDamage(towerWeaponLevel);
+    // タワーの攻撃力を計算（レベルに応じて1.1倍ずつ増加）
+    const baseDamage = 10; // 基本ダメージ（主人公の初期攻撃力）
+    const damage = Math.floor(baseDamage * Math.pow(1.1, this.towerLevel));
 
     // 敵にダメージを与える
     enemyManager.damageEnemy(enemy, damage);
   }
 
   /**
+   * タワーをアップグレード
+   */
+  public upgradeTower(): boolean {
+    if (!this.isActive) {
+      // 初回アップグレードでタワーをアクティブ化
+      this.isActive = true;
+      this.towerLevel = 1;
+      return true;
+    } else {
+      // 2回目以降はレベルを上げる
+      this.towerLevel += 1;
+      return true;
+    }
+  }
+
+  /**
    * タワーの攻撃力を取得
    */
   public getTowerAttackPower(): number {
-    const towerWeaponLevel = 1; // タワーの武器レベル（固定）
-    return calculateDamage(towerWeaponLevel);
+    if (!this.isActive) return 0;
+    const baseDamage = 10; // 基本ダメージ（主人公の初期攻撃力）
+    return Math.floor(baseDamage * Math.pow(1.1, this.towerLevel - 1));
+  }
+
+  /**
+   * タワーがアクティブかどうか
+   */
+  public isTowerActive(): boolean {
+    return this.isActive;
+  }
+
+  /**
+   * タワーのレベルを取得
+   */
+  public getTowerLevel(): number {
+    return this.towerLevel;
   }
 
   /**

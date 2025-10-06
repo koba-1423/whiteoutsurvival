@@ -31,6 +31,7 @@ export class SceneManager {
   public shopOutputPosition?: THREE.Vector3;
   // 武器アップグレードエリアのAABB
   public forgeAreaBox?: CollisionBox;
+  public towerAreaBox?: CollisionBox;
 
   constructor() {
     // シーンの作成と背景色の設定
@@ -178,6 +179,7 @@ export class SceneManager {
     // 4. 主人公の右側 - タワーエリア（床なし）
     const towerCollisions = createTowerArea(this.scene, 14, 0);
     this.collisionBoxes.push(...towerCollisions);
+    this.towerAreaBox = towerCollisions[0];
   }
 
   /**
