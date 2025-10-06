@@ -5,7 +5,6 @@ import {
   calculateDefense,
 } from "../state/frost_survival_design.js";
 import { createPlayerModel } from "../models/PlayerModel.js";
-import { createSwordModel } from "../models/WeaponModel.js";
 import { EffectManager } from "../ui/EffectManager.js";
 import type { EnemyManager } from "../enemy/EnemyManager.js";
 import { EnemyHealthBar } from "../enemy/EnemyHealthBar.js";
@@ -14,6 +13,8 @@ import {
   createCookedMeatVisual,
   createCoinVisual,
 } from "./MeatAndCoinVisuals.js";
+import { removeCoinStack } from "./CoinStackManager.js";
+import { WeaponUpgradeManager } from "./WeaponUpgradeManager.js";
 import type { CollisionBox } from "../rendering/SceneManager.js";
 
 /**
@@ -33,6 +34,7 @@ export class PlayerManager {
   private damageIFrames: number = 0.6; // 被弾後の無敵時間（秒）
   private meatStackGroup: THREE.Group = new THREE.Group();
   private meatStackCount: number = 0;
+  private weaponUpgradeManager: WeaponUpgradeManager;
 
   constructor(
     scene: THREE.Scene,
@@ -64,24 +66,16 @@ export class PlayerManager {
     // 肉スタック用グループを頭上に追加
     this.meatStackGroup.position.set(0, 2.5, 0);
     this.mesh.add(this.meatStackGroup);
+
+    // 武器アップグレード管理を初期化
+    this.weaponUpgradeManager = new WeaponUpgradeManager();
   }
 
   /**
    * 武器を更新
    */
-  public updateSword(_weaponLevel: number): void {
-    // 既存の武器を削除
-    if (this.currentSword) {
-      this.mesh.remove(this.currentSword);
-    }
-
-    // 新しい武器を作成
-    this.currentSword = createSwordModel();
-    this.currentSword.position.set(0.3, 0.8, 0);
-    this.currentSword.rotation.z = -Math.PI / 4;
-
-    // プレイヤーメッシュに武器を追加
-    this.mesh.add(this.currentSword);
+  public updateSword(weaponLevel: number): void {
+    this.weaponUpgradeManager.updateSword(weaponLevel, this.mesh as THREE.Group);
   }
 
   /**
@@ -254,6 +248,17 @@ export class PlayerManager {
     }
   }
 
+  /** 頭上からコインを取り除く */
+  public removeCoinStack(count: number = 1): number {
+    const removed = removeCoinStack(
+      this.meatStackGroup,
+      this.meatStackCount,
+      count
+    );
+    this.meatStackCount = Math.max(0, this.meatStackCount - removed);
+    return removed;
+  }
+
   /**
    * 肉の見た目を作成（簡易的な直方体）
    */
@@ -338,7 +343,7 @@ export class PlayerManager {
     // 肉を1個獲得
     state.meatCount += 1;
 
-    // お金を少し獲得
+    // お金を少し獲得（1コイン=10円の価値）
     state.money += 5;
 
     // 経験値を獲得

@@ -64,7 +64,7 @@ export class UIManager {
       this.processedCountEl.textContent = state.processedMeats.toString();
     }
     if (this.moneyCountEl) {
-      this.moneyCountEl.textContent = state.money.toString();
+      this.moneyCountEl.textContent = (state.money * 10).toString(); // 1コイン=10円
     }
     if (this.controlStatusEl) {
       this.controlStatusEl.textContent = "ON";

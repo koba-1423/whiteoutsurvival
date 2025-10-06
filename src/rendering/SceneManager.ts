@@ -29,6 +29,8 @@ export class SceneManager {
   // 換金エリアのAABBと右側の出力座標（コイン積み上げ位置）
   public shopAreaBox?: CollisionBox;
   public shopOutputPosition?: THREE.Vector3;
+  // 武器アップグレードエリアのAABB
+  public forgeAreaBox?: CollisionBox;
 
   constructor() {
     // シーンの作成と背景色の設定
@@ -171,6 +173,7 @@ export class SceneManager {
     this.createArea(13, distanceFromCenter, areaSize, 0xff4444, "武器UP");
     const forgeCollisions = createForgeArea(this.scene, 13, distanceFromCenter);
     this.collisionBoxes.push(...forgeCollisions);
+    this.forgeAreaBox = forgeCollisions[0];
 
     // 4. 主人公の右側 - タワーエリア（床なし）
     const towerCollisions = createTowerArea(this.scene, 14, 0);

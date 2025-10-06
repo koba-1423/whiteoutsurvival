@@ -52,8 +52,8 @@ export function getExperienceRequired(level: number): number {
  * ダメージ計算
  */
 export function calculateDamage(weaponLevel: number): number {
-  const baseDamage = 10 + (weaponLevel - 1) * 5;
-  const levelMultiplier = 1 + (weaponLevel - 1) * 0.1;
+  const baseDamage = 10;
+  const levelMultiplier = Math.pow(1.1, weaponLevel - 1); // 1.1倍ずつ増加
   return Math.floor(baseDamage * levelMultiplier);
 }
 

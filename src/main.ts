@@ -38,6 +38,7 @@ class Game {
   // 加工用のタイマー
   private lastProcessAt: number = 0;
   private lastCashInAt: number = 0;
+  private lastWeaponUpgradeAt: number = 0;
   // コイン表示用のタグ
   private static readonly COIN_TAG = "__coin__";
   // 焼肉回収用のタグ
@@ -136,6 +137,9 @@ class Game {
 
     // 換金エリア内では1秒ごとに焼肉を1枚換金
     this.updateCashInProcess();
+
+    // 武器エリア内では50円で武器アップグレード
+    this.updateWeaponUpgradeProcess();
 
     // カメラを更新
     this.sceneManager.updateCamera(this.playerManager.getPosition());
@@ -254,7 +258,7 @@ class Game {
 
     const removed = this.playerManager.removeCookedMeatStack(1);
     if (removed > 0) {
-      this.state.money += removed; // 1枚=1コイン
+      this.state.money += removed; // 1枚=1コイン（表示時は10倍）
       // コインを視覚的に表示
       this.spawnCoin(this.sceneManager.shopOutputPosition!);
       this.lastCashInAt = now;
@@ -321,9 +325,41 @@ class Game {
 
     if (toRemove.length > 0) {
       toRemove.forEach((coin) => this.sceneManager.scene.remove(coin));
-      this.state.money += toRemove.length; // 回収したコイン数を所持金に追加
+      this.state.money += toRemove.length; // 回収したコイン数を所持金に追加（表示時は10倍）
       // 頭上にコインを追加
       this.playerManager.addCoinStack(toRemove.length);
+    }
+  }
+
+  private updateWeaponUpgradeProcess(): void {
+    const box = this.sceneManager.forgeAreaBox;
+    if (!box) return;
+
+    const p = this.playerManager.getPosition();
+    const margin = 0.6;
+    const inside =
+      p.x >= box.minX - margin &&
+      p.x <= box.maxX + margin &&
+      p.z >= box.minZ - margin &&
+      p.z <= box.maxZ + margin;
+    if (!inside) return;
+
+    const now = this.clock.getElapsedTime();
+    if (now - this.lastWeaponUpgradeAt < 1.0) return;
+
+    // 50円（5コイン）で武器アップグレード
+    const upgradeCost = 5; // 5コイン = 50円
+    if (this.state.money >= upgradeCost) {
+      // 頭上からコインを5枚取り除く
+      const removedCoins = this.playerManager.removeCoinStack(5);
+      if (removedCoins >= 5) {
+        this.state.money -= upgradeCost;
+        this.state.weaponLevel += 1;
+        this.lastWeaponUpgradeAt = now;
+
+        // プレイヤーの武器を更新
+        this.playerManager.updateSword(this.state.weaponLevel);
+      }
     }
   }
 
