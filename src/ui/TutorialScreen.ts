@@ -6,6 +6,7 @@ export class TutorialScreen {
   private container: HTMLElement;
   private isVisible: boolean = true;
   private onStartCallback?: () => void;
+  private isButtonClicked: boolean = false;
 
   constructor(onStart?: () => void) {
     this.onStartCallback = onStart;
@@ -178,6 +179,9 @@ export class TutorialScreen {
       position: relative !important;
       visibility: visible !important;
       opacity: 1 !important;
+      touch-action: manipulation !important;
+      user-select: none !important;
+      -webkit-tap-highlight-color: transparent !important;
     `;
 
     this.addButtonEffects(startButton);
@@ -188,21 +192,55 @@ export class TutorialScreen {
    * ボタンエフェクトを追加
    */
   private addButtonEffects(button: HTMLElement): void {
+    // PC用ホバーエフェクト
     button.addEventListener("mouseenter", () => {
-      button.style.transform = "translateY(-2px)";
-      button.style.boxShadow = "0 6px 20px rgba(0,0,0,0.4)";
+      if (!this.isButtonClicked) {
+        button.style.transform = "translateY(-2px)";
+        button.style.boxShadow = "0 6px 20px rgba(0,0,0,0.4)";
+      }
     });
 
     button.addEventListener("mouseleave", () => {
-      button.style.transform = "translateY(0)";
-      button.style.boxShadow = "0 4px 15px rgba(0,0,0,0.3)";
+      if (!this.isButtonClicked) {
+        button.style.transform = "translateY(0)";
+        button.style.boxShadow = "0 4px 15px rgba(0,0,0,0.3)";
+      }
     });
 
-    button.addEventListener("click", () => {
-      this.hide();
-      if (this.onStartCallback) {
-        this.onStartCallback();
+    // クリック/タップ処理（重複防止）
+    const handleStart = () => {
+      if (this.isButtonClicked) {
+        return; // 既にクリック済みの場合は何もしない
       }
+      
+      this.isButtonClicked = true;
+      
+      // ボタンを無効化
+      button.style.opacity = "0.7";
+      button.style.cursor = "not-allowed";
+      button.textContent = "ゲーム開始中...";
+      
+      // 少し遅延してからゲーム開始
+      setTimeout(() => {
+        this.hide();
+        if (this.onStartCallback) {
+          this.onStartCallback();
+        }
+      }, 300);
+    };
+
+    // PC用クリック
+    button.addEventListener("click", handleStart);
+    
+    // スマホ用タッチ
+    button.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      handleStart();
+    });
+    
+    // スマホ用タップ
+    button.addEventListener("touchend", (e) => {
+      e.preventDefault();
     });
   }
 
