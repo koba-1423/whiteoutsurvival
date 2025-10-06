@@ -112,7 +112,11 @@ class Game {
     );
 
     // プレイヤーの更新（自動攻撃を含む）
-    this.playerManager.update(this.enemyManager, this.state);
+    this.playerManager.update(
+      this.enemyManager,
+      this.state,
+      this.sceneManager.camera
+    );
 
     // カメラを更新
     this.sceneManager.updateCamera(this.playerManager.getPosition());
