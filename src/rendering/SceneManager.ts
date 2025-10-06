@@ -26,6 +26,9 @@ export class SceneManager {
   // 加工エリアのAABBと右側の出力座標（積み上げ位置）
   public cookingAreaBox?: CollisionBox;
   public cookingOutputPosition?: THREE.Vector3;
+  // 換金エリアのAABBと右側の出力座標（コイン積み上げ位置）
+  public shopAreaBox?: CollisionBox;
+  public shopOutputPosition?: THREE.Vector3;
 
   constructor() {
     // シーンの作成と背景色の設定
@@ -161,6 +164,8 @@ export class SceneManager {
     this.createArea(0, distanceFromCenter, areaSize, 0xffd700, "換金エリア");
     const shopCollisions = createShopArea(this.scene, 0, distanceFromCenter);
     this.collisionBoxes.push(...shopCollisions);
+    this.shopAreaBox = shopCollisions[0];
+    this.shopOutputPosition = new THREE.Vector3(3.0, 1.0, distanceFromCenter);
 
     // 3. 右 - 武器アップグレードエリア（赤色）
     this.createArea(13, distanceFromCenter, areaSize, 0xff4444, "武器UP");

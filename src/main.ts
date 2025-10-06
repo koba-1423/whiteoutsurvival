@@ -37,6 +37,9 @@ class Game {
   private state: GameState;
   // 加工用のタイマー
   private lastProcessAt: number = 0;
+  private lastCashInAt: number = 0;
+  // コイン表示用のタグ
+  private static readonly COIN_TAG = "__coin__";
   // 焼肉回収用のタグ
   private static readonly COOKED_MEAT_TAG = "__cooked_meat__";
 
@@ -127,6 +130,12 @@ class Game {
 
     // 焼肉の近接回収
     this.collectCookedMeatIfNearby();
+
+    // コインの近接回収
+    this.collectCoinsIfNearby();
+
+    // 換金エリア内では1秒ごとに焼肉を1枚換金
+    this.updateCashInProcess();
 
     // カメラを更新
     this.sceneManager.updateCamera(this.playerManager.getPosition());
@@ -225,6 +234,97 @@ class Game {
     // 焼肉タグを設定
     group.userData[Game.COOKED_MEAT_TAG] = true;
     this.sceneManager.scene.add(group);
+  }
+
+  private updateCashInProcess(): void {
+    const box = this.sceneManager.shopAreaBox;
+    if (!box) return;
+
+    const p = this.playerManager.getPosition();
+    const margin = 0.6;
+    const inside =
+      p.x >= box.minX - margin &&
+      p.x <= box.maxX + margin &&
+      p.z >= box.minZ - margin &&
+      p.z <= box.maxZ + margin;
+    if (!inside) return;
+
+    const now = this.clock.getElapsedTime();
+    if (now - this.lastCashInAt < 1.0) return;
+
+    const removed = this.playerManager.removeCookedMeatStack(1);
+    if (removed > 0) {
+      this.state.money += removed; // 1枚=1コイン
+      // コインを視覚的に表示
+      this.spawnCoin(this.sceneManager.shopOutputPosition!);
+      this.lastCashInAt = now;
+    }
+  }
+
+  private spawnCoin(basePos: THREE.Vector3): void {
+    // コインの3Dモデルを作成（サイズを大きく）
+    const coinGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.05, 16);
+    const coinMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffd700, // 金色
+      metalness: 0.8,
+      roughness: 0.2,
+    });
+    const coin = new THREE.Mesh(coinGeometry, coinMaterial);
+
+    // コインを寝かせる（円柱を横に）
+    coin.rotation.z = Math.PI / 2;
+
+    // 既存のコイン数をカウントして高さを決定
+    let coinCount = 0;
+    this.sceneManager.scene.traverse((obj) => {
+      if (obj.userData && obj.userData[Game.COIN_TAG]) {
+        const d = obj.position.distanceTo(basePos);
+        if (d < 0.3) {
+          coinCount++;
+        }
+      }
+    });
+
+    // 位置を設定（少しランダムに散らばらせる）
+    const xJitter = (Math.random() - 0.5) * 0.15;
+    const zJitter = (Math.random() - 0.5) * 0.15;
+    coin.position.set(
+      basePos.x + xJitter,
+      basePos.y + coinCount * 0.08, // コインの厚み分ずつ積む
+      basePos.z + zJitter
+    );
+
+    coin.castShadow = false;
+    coin.receiveShadow = false;
+
+    // コインタグを設定
+    coin.userData[Game.COIN_TAG] = true;
+    this.sceneManager.scene.add(coin);
+  }
+
+  // 近くのコインを回収して所持金に追加
+  private collectCoinsIfNearby(): void {
+    const p = this.playerManager.getPosition();
+    const pickupRadius = 2.5; // コイン回収半径
+    const toRemove: THREE.Object3D[] = [];
+
+    this.sceneManager.scene.traverse((obj) => {
+      if (obj.userData && obj.userData[Game.COIN_TAG]) {
+        const dx = obj.position.x - p.x;
+        const dz = obj.position.z - p.z;
+        const horizDist = Math.sqrt(dx * dx + dz * dz);
+        if (horizDist <= pickupRadius) {
+          toRemove.push(obj);
+        }
+      }
+    });
+
+    if (toRemove.length > 0) {
+      toRemove.forEach((coin) => this.sceneManager.scene.remove(coin));
+      this.state.money += toRemove.length; // 回収したコイン数を所持金に追加
+      // 頭上にコインを追加
+      this.playerManager.addCoinStack(toRemove.length);
+    }
   }
 
   // 近くの焼肉を回収して頭上に積む

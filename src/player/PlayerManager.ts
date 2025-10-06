@@ -9,6 +9,7 @@ import { createSwordModel } from "../models/WeaponModel.js";
 import { EffectManager } from "../ui/EffectManager.js";
 import type { EnemyManager } from "../enemy/EnemyManager.js";
 import { EnemyHealthBar } from "../enemy/EnemyHealthBar.js";
+import { createRawMeatVisual, createCookedMeatVisual, createCoinVisual } from "./MeatAndCoinVisuals.js";
 import type { CollisionBox } from "../rendering/SceneManager.js";
 
 /**
@@ -150,7 +151,7 @@ export class PlayerManager {
    */
   public addMeatStack(count: number = 1): void {
     for (let i = 0; i < count; i++) {
-      const meat = this.createMeatVisual();
+      const meat = createRawMeatVisual();
       const index = this.meatStackCount;
       // 縦方向に少しずつ積む。横は微小なランダムで見た目にバリエーション
       const yOffset = index * 0.095; // 1個あたりの厚み分だけ積む
@@ -167,7 +168,7 @@ export class PlayerManager {
    */
   public addCookedMeatStack(count: number = 1): void {
     for (let i = 0; i < count; i++) {
-      const meat = this.createCookedMeatVisual();
+      const meat = createCookedMeatVisual();
       const index = this.meatStackCount;
       const yOffset = index * 0.095;
       const xJitter = (Math.random() - 0.5) * 0.06;
@@ -176,6 +177,32 @@ export class PlayerManager {
       this.meatStackGroup.add(meat);
       this.meatStackCount += 1;
     }
+  }
+
+  /** 焼肉を上から優先的に取り除く */
+  public removeCookedMeatStack(count: number = 1): number {
+    let removed = 0;
+    for (let i = 0; i < count; i++) {
+      let removedOne = false;
+      for (let idx = this.meatStackGroup.children.length - 1; idx >= 0; idx--) {
+        const child = this.meatStackGroup.children[idx] as THREE.Object3D;
+        const type =
+          (child.userData && (child.userData as any).meatType) || undefined;
+        if (type === "cooked") {
+          this.meatStackGroup.remove(child);
+          this.meatStackCount = Math.max(0, this.meatStackCount - 1);
+          removed += 1;
+          removedOne = true;
+          break;
+        }
+      }
+      if (!removedOne) break;
+    }
+    // 高さを詰める
+    this.meatStackGroup.children.forEach((child, index) => {
+      child.position.y = index * 0.095;
+    });
+    return removed;
   }
 
   /**
@@ -209,84 +236,23 @@ export class PlayerManager {
     return removed;
   }
 
+  /** コインを頭上に追加 */
+  public addCoinStack(count: number = 1): void {
+    for (let i = 0; i < count; i++) {
+      const coin = createCoinVisual();
+      const index = this.meatStackGroup.children.length;
+      const yOffset = index * 0.095;
+      const xJitter = (Math.random() - 0.5) * 0.06;
+      const zJitter = (Math.random() - 0.5) * 0.06;
+      coin.position.set(xJitter, yOffset, zJitter);
+      this.meatStackGroup.add(coin);
+      this.meatStackCount += 1;
+    }
+  }
+
   /**
    * 肉の見た目を作成（簡易的な直方体）
    */
-  private createMeatVisual(): THREE.Object3D {
-    const group = new THREE.Group();
-
-    // ステーキ本体（薄い円柱を楕円にスケール）
-    const steakGeometry = new THREE.CylinderGeometry(0.22, 0.2, 0.08, 20);
-    const steakMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff3b3b, // 鮮やかな赤
-      metalness: 0.05,
-      roughness: 0.8,
-    });
-    const steakMesh = new THREE.Mesh(steakGeometry, steakMaterial);
-    // 回転はさせず、広い面（円形の面）を地面と平行に保持
-    // XZ方向にスケールして楕円の広い面を作る。Yが厚み。
-    steakMesh.scale.set(1.6, 1.0, 1.2);
-    steakMesh.castShadow = false;
-    steakMesh.receiveShadow = false;
-    group.add(steakMesh);
-
-    // 脂身の白い帯
-    const fatGeometry = new THREE.BoxGeometry(0.06, 0.008, 0.36);
-    const fatMaterial = new THREE.MeshStandardMaterial({
-      color: 0xfff2cc,
-      metalness: 0.1,
-      roughness: 0.6,
-      emissive: 0x000000,
-    });
-    const fatMesh = new THREE.Mesh(fatGeometry, fatMaterial);
-    fatMesh.position.set(0, 0.042, 0); // 上面近くに配置
-    fatMesh.rotation.y = (Math.random() - 0.5) * 0.4; // 少し斜めに
-    fatMesh.castShadow = false;
-    group.add(fatMesh);
-
-    // 自然なブレ
-    group.rotation.y = Math.random() * Math.PI * 2; // 水平回転のみ強め
-    group.rotation.x = (Math.random() - 0.5) * 0.02; // 傾きはごく小さく
-    group.rotation.z = (Math.random() - 0.5) * 0.02;
-    // 種別タグ
-    group.userData.meatType = "raw";
-
-    return group;
-  }
-
-  /** 焼肉の見た目（少し濃い色で薄め） */
-  private createCookedMeatVisual(): THREE.Object3D {
-    const group = new THREE.Group();
-    const steakGeometry = new THREE.CylinderGeometry(0.22, 0.2, 0.06, 20);
-    const steakMaterial = new THREE.MeshStandardMaterial({
-      color: 0x7a1a1a,
-      metalness: 0.0,
-      roughness: 0.85,
-    });
-    const steakMesh = new THREE.Mesh(steakGeometry, steakMaterial);
-    steakMesh.scale.set(1.6, 1.0, 1.2);
-    steakMesh.castShadow = false;
-    steakMesh.receiveShadow = false;
-    group.add(steakMesh);
-
-    const fatGeometry = new THREE.BoxGeometry(0.06, 0.006, 0.36);
-    const fatMaterial = new THREE.MeshStandardMaterial({
-      color: 0xf5e6c8,
-      metalness: 0.05,
-      roughness: 0.6,
-    });
-    const fatMesh = new THREE.Mesh(fatGeometry, fatMaterial);
-    fatMesh.position.set(0, 0.038, 0);
-    fatMesh.rotation.y = (Math.random() - 0.5) * 0.4;
-    fatMesh.castShadow = false;
-    group.add(fatMesh);
-
-    group.rotation.y = Math.random() * Math.PI * 2;
-    group.rotation.x = (Math.random() - 0.5) * 0.02;
-    group.rotation.z = (Math.random() - 0.5) * 0.02;
-    group.userData.meatType = "cooked";
-    return group;
-  }
 
   /**
    * プレイヤーの攻撃処理
