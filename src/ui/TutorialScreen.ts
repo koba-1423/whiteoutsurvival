@@ -28,15 +28,15 @@ export class TutorialScreen {
 
     // ページに追加
     document.body.appendChild(this.container);
-    
+
     // ボタンが確実に表示されるように強制更新
     setTimeout(() => {
       if (startButton && startButton.parentNode) {
-        startButton.style.display = 'block';
-        startButton.style.visibility = 'visible';
-        startButton.style.opacity = '1';
+        startButton.style.display = "block";
+        startButton.style.visibility = "visible";
+        startButton.style.opacity = "1";
         // ボタンのテキストも確認
-        startButton.textContent = 'ゲーム開始';
+        startButton.textContent = "ゲーム開始";
       }
     }, 100);
   }
@@ -55,15 +55,16 @@ export class TutorialScreen {
       background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
       display: flex !important;
       flex-direction: column !important;
-      justify-content: center !important;
+      justify-content: flex-start !important;
       align-items: center !important;
       z-index: 999999 !important;
       font-family: 'Arial', sans-serif !important;
       color: white !important;
       margin: 0 !important;
-      padding: 0 !important;
+      padding: 2rem 0 !important;
       border: none !important;
       outline: none !important;
+      overflow-y: auto !important;
     `;
   }
 
@@ -89,12 +90,14 @@ export class TutorialScreen {
     const instructionContainer = document.createElement("div");
     instructionContainer.style.cssText = `
       background: rgba(0, 0, 0, 0.7);
-      padding: 2rem;
+      padding: 1.5rem;
       border-radius: 15px;
-      max-width: 800px;
+      max-width: 600px;
       margin: 0 2rem;
       backdrop-filter: blur(10px);
       border: 2px solid rgba(255, 255, 255, 0.2);
+      max-height: 60vh;
+      overflow-y: auto;
     `;
 
     const instructions = this.getInstructionText();
@@ -107,8 +110,8 @@ export class TutorialScreen {
       )
       .join("");
     instructionText.style.cssText = `
-      font-size: 1.1rem;
-      line-height: 1.6;
+      font-size: 1rem;
+      line-height: 1.4;
     `;
 
     instructionContainer.appendChild(instructionText);
