@@ -10,6 +10,7 @@ import { UIManager } from "./ui/UIManager.js";
 import { EffectManager } from "./ui/EffectManager.js";
 import { InputManager } from "./input/InputManager.js";
 import { SnowParticles } from "./effects/SnowParticles.js";
+import { TowerAttackManager } from "./tower/TowerAttackManager.js";
 
 /**
  * グローバル型定義
@@ -32,6 +33,7 @@ class Game {
   private effectManager: EffectManager;
   private inputManager: InputManager;
   private snowParticles: SnowParticles;
+  private towerAttackManager: TowerAttackManager;
   private clock: THREE.Clock;
   private animationId: number | null = null;
   private state: GameState;
@@ -80,6 +82,10 @@ class Game {
 
     // 雪のパーティクルを作成
     this.snowParticles = new SnowParticles(this.sceneManager.scene);
+
+    // タワー攻撃管理を作成
+    const towerPosition = new THREE.Vector3(14, 0, 15); // タワーの位置
+    this.towerAttackManager = new TowerAttackManager(towerPosition, this.clock);
 
     // ゲームループを開始
     this.startGameLoop();
@@ -140,6 +146,9 @@ class Game {
 
     // 武器エリア内では50円で武器アップグレード
     this.updateWeaponUpgradeProcess();
+
+    // タワーの自動攻撃
+    this.towerAttackManager.update(this.enemyManager);
 
     // カメラを更新
     this.sceneManager.updateCamera(this.playerManager.getPosition());
