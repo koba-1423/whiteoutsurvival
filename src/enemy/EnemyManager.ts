@@ -30,7 +30,7 @@ export class EnemyManager {
   private clock: THREE.Clock;
   private effectManager: EffectManager;
   private enemySpeed: number = 2.0;
-  private enemyAttackRange: number = 1.5;
+  private enemyAttackRange: number = 3.5;
   private enemyAttackCooldown: number = 1.5;
   private safeZoneRadius: number = 4.0; // セーフゾーンの半径
   private spawnAreaWidth: number = 100; // スポーンエリアの幅（X方向）
@@ -39,6 +39,10 @@ export class EnemyManager {
   private animator: EnemyAnimator;
   private healthBarManager: EnemyHealthBar;
   private ai: EnemyAI;
+  private separationRadius: number = 3.5; // 敵同士の最小距離（半径）
+  private separationStrength: number = 2.5; // 離反の強さ（移動速度に乗算）
+  private playerCollisionRadius: number = 3.5; // プレイヤーとの衝突半径
+  private maxChasers: number = 5; // 追跡に参加できる最大の敵数
 
   constructor(
     scene: THREE.Scene,
@@ -138,19 +142,57 @@ export class EnemyManager {
       playerPosition.z <= 0 &&
       playerPosition.z >= -this.spawnAreaDepth;
 
+    // 追跡に参加する最も近い敵（最大maxChasers体）を算出
+    const chasers = this.selectNearestChasers(
+      playerPosition,
+      isPlayerInSafeZone,
+      isPlayerInSpawnArea
+    );
+
+    // 敵ごとの更新
     this.enemies.forEach((enemyData) => {
+      const isChaser = chasers.has(enemyData);
       this.updateSingleEnemy(
         enemyData,
         deltaTime,
         playerPosition,
-        isPlayerInSafeZone,
-        isPlayerInSpawnArea,
+        isChaser,
         currentTime,
         playerManager,
         state,
         camera
       );
     });
+
+    // 敵同士の重なりを軽減（単純な分離ベクトル）
+    this.applyEnemySeparation(deltaTime);
+  }
+
+  /**
+   * 追跡に参加する最も近い敵を選出（最大 maxChasers 体）
+   */
+  private selectNearestChasers(
+    playerPosition: THREE.Vector3,
+    isPlayerInSafeZone: boolean,
+    isPlayerInSpawnArea: boolean
+  ): Set<EnemyData> {
+    const eligible = this.enemies.filter((e) => {
+      if (!isPlayerInSpawnArea || isPlayerInSafeZone) {
+        return false;
+      }
+      // 範囲内（任意に広い）にいる敵のみ対象
+      const d = e.mesh.position.distanceTo(playerPosition);
+      return d < 100;
+    });
+
+    // 距離でソートして先頭 maxChasers 体を採用
+    eligible.sort((a, b) => {
+      const da = a.mesh.position.distanceTo(playerPosition);
+      const db = b.mesh.position.distanceTo(playerPosition);
+      return da - db;
+    });
+
+    return new Set(eligible.slice(0, this.maxChasers));
   }
 
   /**
@@ -160,8 +202,7 @@ export class EnemyManager {
     enemyData: EnemyData,
     deltaTime: number,
     playerPosition: THREE.Vector3,
-    isPlayerInSafeZone: boolean,
-    isPlayerInSpawnArea: boolean,
+    isChaser: boolean,
     currentTime: number,
     playerManager: PlayerManager,
     state: GameState,
@@ -173,10 +214,17 @@ export class EnemyManager {
     // HPゲージを常にカメラの方に向ける（ビルボード効果）
     this.healthBarManager.updateBillboard(enemyData.healthBar, camera.position);
 
-    if (isPlayerInSpawnArea && !isPlayerInSafeZone && distance < 100) {
+    if (isChaser && distance < 100) {
       // プレイヤーがスポーンエリア内かつセーフゾーン外にいる場合は追跡
-      this.ai.chasePlayer(enemy, playerPosition, deltaTime, currentTime, (e) =>
-        this.enforceSafeZoneBoundary(e)
+      this.ai.chasePlayer(
+        enemy,
+        playerPosition,
+        deltaTime,
+        currentTime,
+        (e) => {
+          this.enforceSafeZoneBoundary(e);
+          this.enforcePlayerCollision(e, playerPosition);
+        }
       );
 
       // 攻撃範囲内で攻撃
@@ -196,7 +244,10 @@ export class EnemyManager {
         enemyData.wanderTarget,
         deltaTime,
         currentTime,
-        (e) => this.enforceSafeZoneBoundary(e)
+        (e) => {
+          this.enforceSafeZoneBoundary(e);
+          this.enforcePlayerCollision(e, playerPosition);
+        }
       );
     }
   }
@@ -217,6 +268,46 @@ export class EnemyManager {
       const angle = Math.atan2(enemy.position.z, enemy.position.x);
       enemy.position.x = Math.cos(angle) * enemySafeDistance;
       enemy.position.z = Math.sin(angle) * enemySafeDistance;
+    }
+  }
+
+  /**
+   * 敵同士が近すぎる場合に互いに反発して重なりを軽減
+   * シンプルなO(n^2)だが体数が少ないため許容
+   */
+  private applyEnemySeparation(deltaTime: number): void {
+    const minDist = this.separationRadius;
+    const minDistSq = minDist * minDist;
+
+    for (let i = 0; i < this.enemies.length; i++) {
+      const a = this.enemies[i].mesh.position;
+
+      for (let j = i + 1; j < this.enemies.length; j++) {
+        const b = this.enemies[j].mesh.position;
+        const dx = a.x - b.x;
+        const dz = a.z - b.z;
+        const distSq = dx * dx + dz * dz;
+
+        if (distSq > 0 && distSq < minDistSq) {
+          const dist = Math.sqrt(distSq) || 0.0001;
+          const overlap = (minDist - dist) / dist; // 正規化
+
+          // 反発方向に移動（お互い半分ずつ）
+          const pushX =
+            dx * overlap * 0.5 * this.separationStrength * deltaTime;
+          const pushZ =
+            dz * overlap * 0.5 * this.separationStrength * deltaTime;
+
+          this.enemies[i].mesh.position.x += pushX;
+          this.enemies[i].mesh.position.z += pushZ;
+          this.enemies[j].mesh.position.x -= pushX;
+          this.enemies[j].mesh.position.z -= pushZ;
+
+          // セーフゾーンの外に保つ
+          this.enforceSafeZoneBoundary(this.enemies[i].mesh);
+          this.enforceSafeZoneBoundary(this.enemies[j].mesh);
+        }
+      }
     }
   }
 
@@ -272,6 +363,28 @@ export class EnemyManager {
 
       // リソース獲得
       playerManager.gainResources(state);
+    }
+  }
+
+  /**
+   * プレイヤーとの衝突を防ぐ
+   */
+  private enforcePlayerCollision(
+    enemy: THREE.Object3D,
+    playerPosition: THREE.Vector3
+  ): void {
+    const dx = enemy.position.x - playerPosition.x;
+    const dz = enemy.position.z - playerPosition.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+    const minDistance = this.playerCollisionRadius;
+
+    if (distance < minDistance && distance > 0) {
+      // プレイヤーから離れる方向に押し戻す
+      const pushX = (dx / distance) * (minDistance - distance);
+      const pushZ = (dz / distance) * (minDistance - distance);
+
+      enemy.position.x += pushX;
+      enemy.position.z += pushZ;
     }
   }
 

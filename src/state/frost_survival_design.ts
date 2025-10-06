@@ -27,8 +27,8 @@ export function createInitialState(level: number = 1): GameState {
     // プレイヤー状態
     level: level,
     experience: 0,
-    health: 100,
-    maxHealth: 100,
+    health: 200,
+    maxHealth: 200,
 
     // 装備
     weaponLevel: 1,

@@ -154,7 +154,7 @@ export class PlayerManager {
     }
 
     // 攻撃範囲内の敵を検索
-    const attackRange = 2.0;
+    const attackRange = 3.5;
     const enemiesInRange = enemies.filter((targetEnemy) => {
       const distance = targetEnemy.position.distanceTo(this.mesh.position);
       return distance <= attackRange;
