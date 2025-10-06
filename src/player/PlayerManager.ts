@@ -26,6 +26,8 @@ export class PlayerManager {
   private healthBar?: THREE.Group;
   private lastDamagedAt: number = -Infinity; // 最後に被弾した時刻
   private damageIFrames: number = 0.6; // 被弾後の無敵時間（秒）
+  private meatStackGroup: THREE.Group = new THREE.Group();
+  private meatStackCount: number = 0;
 
   constructor(
     scene: THREE.Scene,
@@ -53,6 +55,10 @@ export class PlayerManager {
     this.healthBar = this.healthBarManager.createHealthBar();
     this.healthBar.position.set(0, 2.2, 0);
     this.mesh.add(this.healthBar);
+
+    // 肉スタック用グループを頭上に追加
+    this.meatStackGroup.position.set(0, 2.5, 0);
+    this.mesh.add(this.meatStackGroup);
   }
 
   /**
@@ -136,6 +142,67 @@ export class PlayerManager {
       );
       this.healthBarManager.updateBillboard(this.healthBar, camera.position);
     }
+  }
+
+  /**
+   * 肉スタックを頭上に追加表示する
+   * 倒した数分だけ積み上がる
+   */
+  public addMeatStack(count: number = 1): void {
+    for (let i = 0; i < count; i++) {
+      const meat = this.createMeatVisual();
+      const index = this.meatStackCount;
+      // 縦方向に少しずつ積む。横は微小なランダムで見た目にバリエーション
+      const yOffset = index * 0.095; // 1個あたりの厚み分だけ積む
+      const xJitter = (Math.random() - 0.5) * 0.06;
+      const zJitter = (Math.random() - 0.5) * 0.06;
+      meat.position.set(xJitter, yOffset, zJitter);
+      this.meatStackGroup.add(meat);
+      this.meatStackCount += 1;
+    }
+  }
+
+  /**
+   * 肉の見た目を作成（簡易的な直方体）
+   */
+  private createMeatVisual(): THREE.Object3D {
+    const group = new THREE.Group();
+
+    // ステーキ本体（薄い円柱を楕円にスケール）
+    const steakGeometry = new THREE.CylinderGeometry(0.22, 0.2, 0.08, 20);
+    const steakMaterial = new THREE.MeshStandardMaterial({
+      color: 0xb22222, // 深い赤
+      metalness: 0.0,
+      roughness: 0.85,
+    });
+    const steakMesh = new THREE.Mesh(steakGeometry, steakMaterial);
+    // 回転はさせず、広い面（円形の面）を地面と平行に保持
+    // XZ方向にスケールして楕円の広い面を作る。Yが厚み。
+    steakMesh.scale.set(1.6, 1.0, 1.2);
+    steakMesh.castShadow = false;
+    steakMesh.receiveShadow = false;
+    group.add(steakMesh);
+
+    // 脂身の白い帯
+    const fatGeometry = new THREE.BoxGeometry(0.06, 0.008, 0.36);
+    const fatMaterial = new THREE.MeshStandardMaterial({
+      color: 0xfff2cc,
+      metalness: 0.1,
+      roughness: 0.6,
+      emissive: 0x000000,
+    });
+    const fatMesh = new THREE.Mesh(fatGeometry, fatMaterial);
+    fatMesh.position.set(0, 0.042, 0); // 上面近くに配置
+    fatMesh.rotation.y = (Math.random() - 0.5) * 0.4; // 少し斜めに
+    fatMesh.castShadow = false;
+    group.add(fatMesh);
+
+    // 自然なブレ
+    group.rotation.y = Math.random() * Math.PI * 2; // 水平回転のみ強め
+    group.rotation.x = (Math.random() - 0.5) * 0.02; // 傾きはごく小さく
+    group.rotation.z = (Math.random() - 0.5) * 0.02;
+
+    return group;
   }
 
   /**

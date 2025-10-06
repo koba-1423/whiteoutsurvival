@@ -374,6 +374,9 @@ export class EnemyManager {
       // リソース獲得
       playerManager.gainResources(state);
 
+      // 視覚効果: プレイヤー頭上に肉を積む
+      playerManager.addMeatStack(1);
+
       // 新しい敵をスポーン
       const newEnemyData = this.spawner.spawnSingleEnemy();
       this.scene.add(newEnemyData.mesh);
