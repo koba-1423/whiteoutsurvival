@@ -208,7 +208,10 @@ export class TutorialScreen {
     });
 
     // クリック/タップ処理（重複防止）
-    const handleStart = () => {
+    const handleStart = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
       if (this.isButtonClicked) {
         return; // 既にクリック済みの場合は何もしない
       }
@@ -218,6 +221,7 @@ export class TutorialScreen {
       // ボタンを無効化
       button.style.opacity = "0.7";
       button.style.cursor = "not-allowed";
+      button.style.pointerEvents = "none";
       button.textContent = "ゲーム開始中...";
       
       // 少し遅延してからゲーム開始
@@ -231,12 +235,9 @@ export class TutorialScreen {
 
     // PC用クリック
     button.addEventListener("click", handleStart);
-    
+
     // スマホ用タッチ
-    button.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      handleStart();
-    });
+    button.addEventListener("touchstart", handleStart);
     
     // スマホ用タップ
     button.addEventListener("touchend", (e) => {

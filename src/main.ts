@@ -44,6 +44,7 @@ class Game {
   private lastCashInAt: number = 0;
   private lastWeaponUpgradeAt: number = 0;
   private lastTowerUpgradeAt: number = 0;
+  private lastSpawnHealAt: number = 0;
   // コイン表示用のタグ
   private static readonly COIN_TAG = "__coin__";
   // 焼肉回収用のタグ
@@ -159,6 +160,9 @@ class Game {
       this.sceneManager.collisionBoxes
     );
 
+    // スポーン位置でのHP回復チェック
+    this.checkSpawnAreaHealing();
+
     // 敵の更新
     this.enemyManager.update(
       deltaTime,
@@ -197,6 +201,31 @@ class Game {
 
     // カメラを更新
     this.sceneManager.updateCamera(this.playerManager.getPosition());
+  }
+
+  /**
+   * スポーン位置でのHP回復チェック
+   */
+  private checkSpawnAreaHealing(): void {
+    const currentTime = this.clock.getElapsedTime();
+    const playerPosition = this.playerManager.getPosition();
+    
+    // スポーン位置（原点周辺）にいるかチェック
+    const spawnRadius = 5.0; // スポーン位置から5m以内
+    const distanceFromSpawn = Math.sqrt(
+      playerPosition.x * playerPosition.x + 
+      playerPosition.z * playerPosition.z
+    );
+    
+    if (distanceFromSpawn <= spawnRadius) {
+      // 1秒ごとにHP回復
+      if (currentTime - this.lastSpawnHealAt >= 1.0) {
+        if (this.state.health < this.state.maxHealth) {
+          this.state.health = Math.min(this.state.health + 10, this.state.maxHealth);
+          this.lastSpawnHealAt = currentTime;
+        }
+      }
+    }
 
     // UIを更新
     this.uiManager.update(this.state);
