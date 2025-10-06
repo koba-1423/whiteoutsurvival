@@ -216,29 +216,6 @@
         }
       }
 
-      /* ダメージテキスト */
-      .damage-text {
-        position: absolute;
-        font-size: 24px;
-        font-weight: bold;
-        color: #ff4444;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-        pointer-events: none;
-        z-index: 2000;
-        animation: damageFloat 2s ease-out forwards;
-      }
-
-      @keyframes damageFloat {
-        0% {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-        100% {
-          opacity: 0;
-          transform: translateY(-50px) scale(1.2);
-        }
-      }
-
       /* ローディング画面 */
       .loading-screen {
         position: fixed;
