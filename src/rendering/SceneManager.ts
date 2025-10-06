@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { createCookingStationArea } from "../areas/CookingStationArea.js";
 import { createShopArea } from "../areas/ShopArea.js";
 import { createForgeArea } from "../areas/ForgeArea.js";
-import { createCompanionArea } from "../areas/CompanionArea.js";
+import { createTowerArea } from "../areas/TowerArea.js";
 
 /**
  * シーン、カメラ、レンダラー、ライティングを管理するクラス
@@ -158,14 +158,9 @@ export class SceneManager {
     const forgeCollisions = createForgeArea(this.scene, 13, distanceFromCenter);
     this.collisionBoxes.push(...forgeCollisions);
 
-    // 4. 右側 - 仲間エリア（緑色）
-    this.createArea(21, distanceFromCenter, areaSize, 0x44ff44, "仲間エリア");
-    const companionCollisions = createCompanionArea(
-      this.scene,
-      21,
-      distanceFromCenter
-    );
-    this.collisionBoxes.push(...companionCollisions);
+    // 4. 主人公の右側 - タワーエリア（床なし）
+    const towerCollisions = createTowerArea(this.scene, 14, 0);
+    this.collisionBoxes.push(...towerCollisions);
   }
 
   /**
