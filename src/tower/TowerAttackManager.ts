@@ -8,7 +8,7 @@ import { EnemyManager } from "../enemy/EnemyManager.js";
 export class TowerAttackManager {
   private lastAttackTime: number = 0;
   private attackCooldown: number = 1.0; // 攻撃間隔（秒）
-  private attackRange: number = 15.0; // 攻撃範囲
+  private attackRange: number = 1000.0; // 攻撃範囲（アプリ全体）
   private towerPosition: THREE.Vector3;
   private clock: THREE.Clock;
   private isActive: boolean = false; // タワーがアクティブかどうか
