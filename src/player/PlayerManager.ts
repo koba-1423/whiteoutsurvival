@@ -54,6 +54,9 @@ export class PlayerManager {
     this.mesh.receiveShadow = true;
     scene.add(this.mesh);
 
+    // 武器アップグレード管理を初期化
+    this.weaponUpgradeManager = new WeaponUpgradeManager();
+
     // 武器を作成
     this.updateSword(weaponLevel);
 
@@ -66,9 +69,6 @@ export class PlayerManager {
     // 肉スタック用グループを頭上に追加
     this.meatStackGroup.position.set(0, 2.5, 0);
     this.mesh.add(this.meatStackGroup);
-
-    // 武器アップグレード管理を初期化
-    this.weaponUpgradeManager = new WeaponUpgradeManager();
   }
 
   /**
