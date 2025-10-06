@@ -10,7 +10,6 @@ export class TutorialScreen {
   constructor(onStart?: () => void) {
     this.onStartCallback = onStart;
     this.createTutorialScreen();
-
   }
 
   /**
@@ -29,6 +28,15 @@ export class TutorialScreen {
 
     // ページに追加
     document.body.appendChild(this.container);
+    
+    // ボタンが確実に表示されるように強制更新
+    setTimeout(() => {
+      if (startButton && startButton.parentNode) {
+        startButton.style.display = 'block';
+        startButton.style.visibility = 'visible';
+        startButton.style.opacity = '1';
+      }
+    }, 50);
   }
 
   /**
@@ -145,24 +153,26 @@ export class TutorialScreen {
     const startButton = document.createElement("button");
     startButton.textContent = "ゲーム開始";
     startButton.style.cssText = `
-      background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-      color: white;
-      border: none;
-      padding: 1rem 3rem;
-      font-size: 1.5rem;
-      font-weight: bold;
-      border-radius: 50px;
-      cursor: pointer;
-      margin-top: 2rem;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      transition: all 0.3s ease;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      display: block;
-      width: auto;
-      min-width: 200px;
-      z-index: 10001;
-      position: relative;
+      background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+      color: white !important;
+      border: none !important;
+      padding: 1rem 3rem !important;
+      font-size: 1.5rem !important;
+      font-weight: bold !important;
+      border-radius: 50px !important;
+      cursor: pointer !important;
+      margin-top: 2rem !important;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+      transition: all 0.3s ease !important;
+      text-transform: uppercase !important;
+      letter-spacing: 1px !important;
+      display: block !important;
+      width: auto !important;
+      min-width: 200px !important;
+      z-index: 1000000 !important;
+      position: relative !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     `;
 
     this.addButtonEffects(startButton);
