@@ -1,4 +1,3 @@
-
 /**
  * チュートリアル画面管理クラス
  * ゲーム開始時に遊び方を表示します
@@ -26,6 +25,7 @@ export class TutorialScreen {
     this.container.appendChild(title);
     this.container.appendChild(instructionContainer);
     this.container.appendChild(startButton);
+
 
     // ページに追加
     document.body.appendChild(this.container);
@@ -86,7 +86,11 @@ export class TutorialScreen {
     const instructions = this.getInstructionText();
     const instructionText = document.createElement("div");
     instructionText.innerHTML = instructions
-      .map(line => line === "" ? "<br>" : `<div style="margin: 0.5rem 0; line-height: 1.6;">${line}</div>`)
+      .map((line) =>
+        line === ""
+          ? "<br>"
+          : `<div style="margin: 0.5rem 0; line-height: 1.6;">${line}</div>`
+      )
       .join("");
     instructionText.style.cssText = `
       font-size: 1.1rem;
@@ -105,7 +109,8 @@ export class TutorialScreen {
       "🎮 ゲームの遊び方",
       "",
       "【基本操作】",
-      "• WASDキーまたは矢印キーで移動",
+      "• PC: WASDキーまたは矢印キーで移動",
+      "• スマホ: 画面をタッチして移動",
       "• 敵に近づくと自動で攻撃",
       "",
       "【エリアの使い方】",
@@ -125,7 +130,7 @@ export class TutorialScreen {
       "• タワーが倒した敵からも生肉を獲得",
       "• タワーを強化すると攻撃力が向上",
       "",
-      "準備ができたら「ゲーム開始」ボタンを押してください！"
+      "準備ができたら「ゲーム開始」ボタンを押してください！",
     ];
   }
 
@@ -149,6 +154,11 @@ export class TutorialScreen {
       transition: all 0.3s ease;
       text-transform: uppercase;
       letter-spacing: 1px;
+      display: block;
+      width: auto;
+      min-width: 200px;
+      z-index: 10001;
+      position: relative;
     `;
 
     this.addButtonEffects(startButton);

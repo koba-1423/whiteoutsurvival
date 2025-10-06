@@ -113,13 +113,13 @@ class Game {
   private startGameLoop(): void {
     const animate = () => {
       this.animationId = requestAnimationFrame(animate);
-      
+
       // チュートリアル表示中はゲーム更新を停止
       if (this.tutorialScreen.isTutorialVisible()) {
         this.render();
         return;
       }
-      
+
       this.update();
       this.render();
     };
@@ -132,7 +132,7 @@ class Game {
   private startGame(): void {
     // チュートリアル画面を非表示
     this.tutorialScreen.hide();
-    
+
     // ゲーム開始時の初期化処理があればここに追加
     console.log("ゲーム開始！");
   }
