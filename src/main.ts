@@ -11,6 +11,7 @@ import { EffectManager } from "./ui/EffectManager.js";
 import { InputManager } from "./input/InputManager.js";
 import { SnowParticles } from "./effects/SnowParticles.js";
 import { TowerAttackManager } from "./tower/TowerAttackManager.js";
+import { TutorialScreen } from "./ui/TutorialScreen.js";
 
 /**
  * グローバル型定義
@@ -34,6 +35,7 @@ class Game {
   private inputManager: InputManager;
   private snowParticles: SnowParticles;
   private towerAttackManager: TowerAttackManager;
+  private tutorialScreen: TutorialScreen;
   private clock: THREE.Clock;
   private animationId: number | null = null;
   private state: GameState;
@@ -96,7 +98,12 @@ class Game {
       }
     );
 
-    // ゲームループを開始
+    // チュートリアル画面を作成
+    this.tutorialScreen = new TutorialScreen(() => {
+      this.startGame();
+    });
+
+    // ゲームループを開始（チュートリアル表示中は停止）
     this.startGameLoop();
   }
 
@@ -106,10 +113,28 @@ class Game {
   private startGameLoop(): void {
     const animate = () => {
       this.animationId = requestAnimationFrame(animate);
+      
+      // チュートリアル表示中はゲーム更新を停止
+      if (this.tutorialScreen.isTutorialVisible()) {
+        this.render();
+        return;
+      }
+      
       this.update();
       this.render();
     };
     animate();
+  }
+
+  /**
+   * ゲーム開始処理
+   */
+  private startGame(): void {
+    // チュートリアル画面を非表示
+    this.tutorialScreen.hide();
+    
+    // ゲーム開始時の初期化処理があればここに追加
+    console.log("ゲーム開始！");
   }
 
   /**
