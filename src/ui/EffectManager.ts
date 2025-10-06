@@ -9,50 +9,18 @@ export class EffectManager {
    * ダメージテキストを表示
    * 敵にダメージを与えたときに表示されます
    */
-  public showDamageText(_position: THREE.Vector3, damage: number): void {
-    const damageText = document.createElement("div");
-    damageText.className = "damage-text";
-    damageText.textContent = `-${damage}`;
-    damageText.style.position = "absolute";
-    damageText.style.left = "50%";
-    damageText.style.top = "50%";
-    damageText.style.transform = "translate(-50%, -50%)";
-    damageText.style.color = "#ff4444";
-    damageText.style.fontSize = "24px";
-    damageText.style.fontWeight = "bold";
-    damageText.style.textShadow = "2px 2px 4px rgba(0, 0, 0, 0.8)";
-    damageText.style.pointerEvents = "none";
-    damageText.style.zIndex = "2000";
-
-    document.body.appendChild(damageText);
-
-    // アニメーション（上に浮かびながらフェードアウト）
-    this.animateFadeOut(damageText, 2);
+  public showDamageText(_position: THREE.Vector3, _damage: number): void {
+    // 無効化
+    return;
   }
 
   /**
    * プレイヤーのダメージテキストを表示
    * プレイヤーがダメージを受けたときに表示されます
    */
-  public showPlayerDamageText(damage: number): void {
-    const damageText = document.createElement("div");
-    damageText.className = "damage-text";
-    damageText.textContent = `-${damage}`;
-    damageText.style.position = "absolute";
-    damageText.style.left = "50%";
-    damageText.style.top = "50%";
-    damageText.style.transform = "translate(-50%, -50%)";
-    damageText.style.color = "#ff0000";
-    damageText.style.fontSize = "32px";
-    damageText.style.fontWeight = "bold";
-    damageText.style.textShadow = "2px 2px 4px rgba(0, 0, 0, 0.8)";
-    damageText.style.pointerEvents = "none";
-    damageText.style.zIndex = "2000";
-
-    document.body.appendChild(damageText);
-
-    // アニメーション（上に浮かびながらフェードアウト）
-    this.animateFadeOut(damageText, 3);
+  public showPlayerDamageText(_damage: number): void {
+    // ダメージテキスト表示を無効化
+    return;
   }
 
   /**
