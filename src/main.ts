@@ -161,7 +161,7 @@ class Game {
     );
 
     // スポーン位置でのHP回復チェック
-    this.checkSpawnAreaHealing();
+    this.checkSpawnAreaHealing(deltaTime);
 
     // 敵の更新
     this.enemyManager.update(
@@ -206,22 +206,24 @@ class Game {
   /**
    * スポーン位置でのHP回復チェック
    */
-  private checkSpawnAreaHealing(): void {
+  private checkSpawnAreaHealing(deltaTime: number): void {
     const currentTime = this.clock.getElapsedTime();
     const playerPosition = this.playerManager.getPosition();
-    
+
     // スポーン位置（原点周辺）にいるかチェック
     const spawnRadius = 5.0; // スポーン位置から5m以内
     const distanceFromSpawn = Math.sqrt(
-      playerPosition.x * playerPosition.x + 
-      playerPosition.z * playerPosition.z
+      playerPosition.x * playerPosition.x + playerPosition.z * playerPosition.z
     );
-    
+
     if (distanceFromSpawn <= spawnRadius) {
       // 1秒ごとにHP回復
       if (currentTime - this.lastSpawnHealAt >= 1.0) {
         if (this.state.health < this.state.maxHealth) {
-          this.state.health = Math.min(this.state.health + 10, this.state.maxHealth);
+          this.state.health = Math.min(
+            this.state.health + 10,
+            this.state.maxHealth
+          );
           this.lastSpawnHealAt = currentTime;
         }
       }
