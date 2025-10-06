@@ -6,11 +6,12 @@ import { GameState } from "../state/frost_survival_design.js";
 import { EnemyAnimator } from "./EnemyAnimator.js";
 import { EnemyHealthBar } from "./EnemyHealthBar.js";
 import { EnemyAI } from "./EnemyAI.js";
+import { EnemySpawner } from "./EnemySpawner.js";
 
 /**
  * 敵のデータ型定義
  */
-interface EnemyData {
+export interface EnemyData {
   mesh: THREE.Object3D;
   hp: number;
   maxHp: number;
@@ -39,6 +40,7 @@ export class EnemyManager {
   private animator: EnemyAnimator;
   private healthBarManager: EnemyHealthBar;
   private ai: EnemyAI;
+  private spawner: EnemySpawner;
   private separationRadius: number = 3.5; // 敵同士の最小距離（半径）
   private separationStrength: number = 2.5; // 離反の強さ（移動速度に乗算）
   private playerCollisionRadius: number = 3.5; // プレイヤーとの衝突半径
@@ -60,6 +62,14 @@ export class EnemyManager {
       this.safeZoneRadius,
       this.spawnAreaWidth,
       this.spawnAreaDepth
+    );
+    this.spawner = new EnemySpawner(
+      this.healthBarManager,
+      this.ai,
+      this.safeZoneRadius,
+      this.spawnAreaWidth,
+      this.spawnAreaDepth,
+      this.enemyMaxHp
     );
   }
 
@@ -363,6 +373,11 @@ export class EnemyManager {
 
       // リソース獲得
       playerManager.gainResources(state);
+
+      // 新しい敵をスポーン
+      const newEnemyData = this.spawner.spawnSingleEnemy();
+      this.scene.add(newEnemyData.mesh);
+      this.enemies.push(newEnemyData);
     }
   }
 
