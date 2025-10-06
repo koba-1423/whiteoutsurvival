@@ -336,18 +336,11 @@ export class EnemyManager {
   /**
    * 敵にダメージを与える
    */
-  public damageEnemy(
-    enemy: THREE.Object3D,
-    playerManager: PlayerManager,
-    state: GameState
-  ): void {
-    // ダメージ計算
-    const damage = playerManager.calculateDamage(state.weaponLevel);
-
+  public damageEnemy(enemy: THREE.Object3D, damage: number): boolean {
     // 対応する敵データを検索
     const enemyData = this.enemies.find((data) => data.mesh === enemy);
     if (!enemyData) {
-      return;
+      return false;
     }
 
     // HPを減らす
@@ -371,17 +364,15 @@ export class EnemyManager {
         this.enemies.splice(enemyIndex, 1);
       }
 
-      // リソース獲得
-      playerManager.gainResources(state);
-
-      // 視覚効果: プレイヤー頭上に肉を積む
-      playerManager.addMeatStack(1);
-
       // 新しい敵をスポーン
       const newEnemyData = this.spawner.spawnSingleEnemy();
       this.scene.add(newEnemyData.mesh);
       this.enemies.push(newEnemyData);
+
+      return true; // 敵が倒された
     }
+
+    return false; // 敵はまだ生きている
   }
 
   /**

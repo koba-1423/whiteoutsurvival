@@ -132,7 +132,12 @@ export class PlayerManager {
     camera: THREE.PerspectiveCamera
   ): void {
     this.handleAttack(enemyManager.getEnemies(), (enemy) => {
-      enemyManager.damageEnemy(enemy, this, state);
+      const damage = this.calculateDamage(state.weaponLevel);
+      const wasKilled = enemyManager.damageEnemy(enemy, damage);
+      if (wasKilled) {
+        this.gainResources(state);
+        this.addMeatStack(1);
+      }
     });
 
     // HPゲージ更新とカメラ向き

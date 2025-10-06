@@ -86,7 +86,15 @@ class Game {
 
     // タワー攻撃管理を作成
     const towerPosition = new THREE.Vector3(14, 0, 15); // タワーの位置
-    this.towerAttackManager = new TowerAttackManager(towerPosition, this.clock);
+    this.towerAttackManager = new TowerAttackManager(
+      towerPosition,
+      this.clock,
+      this.sceneManager.scene,
+      (_enemy) => {
+        // タワーが敵を倒した時の処理（主人公の頭上に生肉を追加）
+        this.playerManager.addMeatStack(1);
+      }
+    );
 
     // ゲームループを開始
     this.startGameLoop();
@@ -152,7 +160,7 @@ class Game {
     this.updateTowerUpgradeProcess();
 
     // タワーの自動攻撃
-    this.towerAttackManager.update(this.enemyManager);
+    this.towerAttackManager.update(this.enemyManager, deltaTime);
 
     // カメラを更新
     this.sceneManager.updateCamera(this.playerManager.getPosition());
