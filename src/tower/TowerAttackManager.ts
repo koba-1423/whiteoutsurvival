@@ -77,7 +77,6 @@ export class TowerAttackManager {
       return distance <= this.attackRange;
     });
 
-
     return enemiesInRange;
   }
 
