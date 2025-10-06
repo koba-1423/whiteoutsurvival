@@ -98,10 +98,18 @@ class Game {
       }
     );
 
-    // チュートリアル画面を作成
-    this.tutorialScreen = new TutorialScreen(() => {
-      this.startGame();
-    });
+    // チュートリアル画面を作成（DOM読み込み完了を待つ）
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
+        this.tutorialScreen = new TutorialScreen(() => {
+          this.startGame();
+        });
+      });
+    } else {
+      this.tutorialScreen = new TutorialScreen(() => {
+        this.startGame();
+      });
+    }
 
     // ゲームループを開始（チュートリアル表示中は停止）
     this.startGameLoop();

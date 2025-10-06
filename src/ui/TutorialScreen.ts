@@ -10,6 +10,7 @@ export class TutorialScreen {
   constructor(onStart?: () => void) {
     this.onStartCallback = onStart;
     this.createTutorialScreen();
+
   }
 
   /**
@@ -26,7 +27,6 @@ export class TutorialScreen {
     this.container.appendChild(instructionContainer);
     this.container.appendChild(startButton);
 
-
     // ページに追加
     document.body.appendChild(this.container);
   }
@@ -37,19 +37,23 @@ export class TutorialScreen {
   private createMainContainer(): void {
     this.container = document.createElement("div");
     this.container.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 10000;
-      font-family: 'Arial', sans-serif;
-      color: white;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      align-items: center !important;
+      z-index: 999999 !important;
+      font-family: 'Arial', sans-serif !important;
+      color: white !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      outline: none !important;
     `;
   }
 
