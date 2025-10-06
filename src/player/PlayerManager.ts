@@ -9,7 +9,11 @@ import { createSwordModel } from "../models/WeaponModel.js";
 import { EffectManager } from "../ui/EffectManager.js";
 import type { EnemyManager } from "../enemy/EnemyManager.js";
 import { EnemyHealthBar } from "../enemy/EnemyHealthBar.js";
-import { createRawMeatVisual, createCookedMeatVisual, createCoinVisual } from "./MeatAndCoinVisuals.js";
+import {
+  createRawMeatVisual,
+  createCookedMeatVisual,
+  createCoinVisual,
+} from "./MeatAndCoinVisuals.js";
 import type { CollisionBox } from "../rendering/SceneManager.js";
 
 /**

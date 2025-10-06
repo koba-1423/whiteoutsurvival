@@ -88,4 +88,3 @@ export function createCoinVisual(): THREE.Object3D {
   group.userData.meatType = "coin";
   return group;
 }
-
