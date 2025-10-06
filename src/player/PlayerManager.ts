@@ -8,6 +8,7 @@ import { createPlayerModel } from "../models/PlayerModel.js";
 import { createSwordModel } from "../models/WeaponModel.js";
 import { EffectManager } from "../ui/EffectManager.js";
 import type { EnemyManager } from "../enemy/EnemyManager.js";
+import { EnemyHealthBar } from "../enemy/EnemyHealthBar.js";
 import type { CollisionBox } from "../rendering/SceneManager.js";
 
 /**
@@ -21,6 +22,10 @@ export class PlayerManager {
   private attackCooldown: number = 0.3;
   private clock: THREE.Clock;
   private effectManager: EffectManager;
+  private healthBarManager: EnemyHealthBar;
+  private healthBar?: THREE.Group;
+  private lastDamagedAt: number = -Infinity; // 最後に被弾した時刻
+  private damageIFrames: number = 0.6; // 被弾後の無敵時間（秒）
 
   constructor(
     scene: THREE.Scene,
@@ -33,6 +38,8 @@ export class PlayerManager {
 
     // プレイヤーモデルを作成
     this.mesh = createPlayerModel();
+    // モデルを2.5倍に拡大
+    this.mesh.scale.set(2.5, 2.5, 2.5);
     this.mesh.position.set(0, 0, 0);
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
@@ -40,6 +47,12 @@ export class PlayerManager {
 
     // 武器を作成
     this.updateSword(weaponLevel);
+
+    // HPゲージを作成
+    this.healthBarManager = new EnemyHealthBar();
+    this.healthBar = this.healthBarManager.createHealthBar();
+    this.healthBar.position.set(0, 2.2, 0);
+    this.mesh.add(this.healthBar);
   }
 
   /**
@@ -105,10 +118,24 @@ export class PlayerManager {
    * プレイヤーの状態を更新
    * 攻撃範囲内に敵がいれば自動的に攻撃します
    */
-  public update(enemyManager: EnemyManager, state: GameState): void {
+  public update(
+    enemyManager: EnemyManager,
+    state: GameState,
+    camera: THREE.PerspectiveCamera
+  ): void {
     this.handleAttack(enemyManager.getEnemies(), (enemy) => {
       enemyManager.damageEnemy(enemy, this, state);
     });
+
+    // HPゲージ更新とカメラ向き
+    if (this.healthBar) {
+      this.healthBarManager.updateHealthBar(
+        this.healthBar,
+        state.health,
+        state.maxHealth
+      );
+      this.healthBarManager.updateBillboard(this.healthBar, camera.position);
+    }
   }
 
   /**
@@ -126,8 +153,6 @@ export class PlayerManager {
       return;
     }
 
-    this.lastPlayerAttack = currentTime;
-
     // 攻撃範囲内の敵を検索
     const attackRange = 2.0;
     const enemiesInRange = enemies.filter((targetEnemy) => {
@@ -135,24 +160,35 @@ export class PlayerManager {
       return distance <= attackRange;
     });
 
-    // 攻撃範囲内の敵にダメージ
-    enemiesInRange.forEach((targetEnemy) => {
-      onEnemyKilled(targetEnemy);
-    });
+    // 攻撃範囲内に敵がいれば攻撃アニメーション開始
+    if (enemiesInRange.length > 0) {
+      this.lastPlayerAttack = currentTime;
+
+      // 攻撃範囲内の敵にダメージ
+      enemiesInRange.forEach((targetEnemy) => {
+        onEnemyKilled(targetEnemy);
+      });
+    }
   }
 
   /**
    * プレイヤーにダメージを与える
    */
   public takeDamage(state: GameState): void {
+    // 無敵時間中はダメージ無効
+    const now = this.clock.getElapsedTime();
+    if (now - this.lastDamagedAt < this.damageIFrames) {
+      return;
+    }
+
     const enemyDamage = 10; // 敵の基本ダメージ
     const defense = calculateDefense(state.armorLevel);
     const actualDamage = Math.max(1, enemyDamage - defense);
 
     state.health -= actualDamage;
 
-    // ダメージテキスト表示
-    this.effectManager.showPlayerDamageText(actualDamage);
+    // 被弾時刻を更新
+    this.lastDamagedAt = now;
 
     // 体力が0以下になった場合の処理
     if (state.health <= 0) {
@@ -187,9 +223,6 @@ export class PlayerManager {
 
     // 経験値を獲得
     this.gainExperience(state, 10);
-
-    // リソース獲得エフェクト
-    this.effectManager.showResourceGainEffect();
   }
 
   /**
@@ -212,9 +245,6 @@ export class PlayerManager {
     state.level += 1;
     state.maxHealth += 20;
     state.health = state.maxHealth; // 体力全回復
-
-    // レベルアップエフェクト
-    this.effectManager.showLevelUpEffect(state.level);
   }
 
   /**
