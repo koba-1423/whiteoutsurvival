@@ -35,8 +35,10 @@ export class TutorialScreen {
         startButton.style.display = 'block';
         startButton.style.visibility = 'visible';
         startButton.style.opacity = '1';
+        // ボタンのテキストも確認
+        startButton.textContent = 'ゲーム開始';
       }
-    }, 50);
+    }, 100);
   }
 
   /**
@@ -153,22 +155,22 @@ export class TutorialScreen {
     const startButton = document.createElement("button");
     startButton.textContent = "ゲーム開始";
     startButton.style.cssText = `
-      background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+      background: #ff4444 !important;
       color: white !important;
-      border: none !important;
-      padding: 1rem 3rem !important;
-      font-size: 1.5rem !important;
+      border: 3px solid #ffffff !important;
+      padding: 1.5rem 4rem !important;
+      font-size: 2rem !important;
       font-weight: bold !important;
-      border-radius: 50px !important;
+      border-radius: 10px !important;
       cursor: pointer !important;
-      margin-top: 2rem !important;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+      margin-top: 3rem !important;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5) !important;
       transition: all 0.3s ease !important;
       text-transform: uppercase !important;
-      letter-spacing: 1px !important;
+      letter-spacing: 2px !important;
       display: block !important;
       width: auto !important;
-      min-width: 200px !important;
+      min-width: 300px !important;
       z-index: 1000000 !important;
       position: relative !important;
       visibility: visible !important;
